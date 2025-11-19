@@ -1,11 +1,18 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
-import { LogIn, RefreshCw, Share2 } from "lucide-react";
+import { useRouter } from "next/navigation";
+import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { Edit2, PlayCircle, Save, Share2, Trash2, XCircle } from "lucide-react";
 import { QuestionCard } from "@/components/question-card";
 import { QuestionForm } from "@/components/question-form";
+import {
+  SessionTitleInput,
+  DateRangeInputs,
+} from "@/components/session-form-inputs";
+import { ConfirmDialog } from "@/components/confirm-dialog";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import {
   Dialog,
   DialogContent,
@@ -15,9 +22,14 @@ import {
 } from "@/components/ui/dialog";
 import { useQuestions } from "@/hooks/useQuestions";
 import { useSessionState } from "@/hooks/useSessionState";
-import { signInWithGoogle } from "@/lib/firebase";
+import {
+  endSession,
+  reactivateSession,
+  updateSession,
+  deleteSession,
+} from "@/lib/questions";
 import { useSessionStore } from "@/lib/stores/session-store";
-import { generateNickname } from "@/lib/utils";
+import { cn } from "@/lib/utils";
 import { toast } from "sonner";
 import type { Question } from "@/lib/types";
 
@@ -30,57 +42,59 @@ const QuestionSkeleton = () => (
 );
 
 export function RoomView({ sessionCode }: RoomViewProps) {
+  const router = useRouter();
+  const queryClient = useQueryClient();
   const { session } = useSessionState(sessionCode);
-  const { questions, isFetching, reaction, comment, changeStatus, remove } =
-    useQuestions({
-      sessionCode,
-    });
-  const { user, setSessionCode, nickname, setNickname } = useSessionStore(
-    (state) => ({
-      user: state.user,
-      setSessionCode: state.setSessionCode,
-      nickname: state.nickname,
-      setNickname: state.setNickname,
-    })
-  );
+  const {
+    questions,
+    isFetching,
+    reaction,
+    changeStatus,
+    remove,
+    toggleHighlight,
+  } = useQuestions({
+    sessionCode,
+  });
+  const {
+    user,
+    setSessionCode,
+    setSessionTitle,
+    isRoomDrawerOpen,
+    setRoomDrawerOpen,
+  } = useSessionStore((state) => ({
+    user: state.user,
+    setSessionCode: state.setSessionCode,
+    setSessionTitle: state.setSessionTitle,
+    isRoomDrawerOpen: state.isRoomDrawerOpen,
+    setRoomDrawerOpen: state.setRoomDrawerOpen,
+  }));
   const [shareCopied, setShareCopied] = useState(false);
-  const [nicknameInput, setNicknameInput] = useState("");
-  const [isNicknameModalOpen, setIsNicknameModalOpen] = useState(false);
-  const [nicknameInitialized, setNicknameInitialized] = useState(false);
-  const [showAuthDialog, setShowAuthDialog] = useState(false);
   const [isDetailsOpen, setIsDetailsOpen] = useState(false);
-  const [reactionMap, setReactionMap] = useState<
-    Record<string, "like" | "love">
-  >({});
-  const bubbleConfig = useMemo(
-    () => [
-      { size: 220, left: 10, duration: 18, delay: 0, opacity: 0.35 },
-      { size: 160, left: 35, duration: 22, delay: 4, opacity: 0.28 },
-      { size: 260, left: 60, duration: 26, delay: 2, opacity: 0.3 },
-      { size: 180, left: 80, duration: 20, delay: 6, opacity: 0.25 },
-      { size: 140, left: 50, duration: 24, delay: 8, opacity: 0.2 },
-    ],
-    []
+  const [reactionMap, setReactionMap] = useState<Record<string, "like">>({});
+  const [hostTab, setHostTab] = useState<
+    "pending" | "approved" | "archived" | "all"
+  >("pending");
+  const [viewerSortTab, setViewerSortTab] = useState<"latest" | "popular">(
+    "latest"
   );
+  const [isEditModalOpen, setIsEditModalOpen] = useState(false);
+  const [isDeleteConfirmOpen, setIsDeleteConfirmOpen] = useState(false);
+  const [editTitle, setEditTitle] = useState("");
+  const [editStartDate, setEditStartDate] = useState("");
+  const [editEndDate, setEditEndDate] = useState("");
 
   useEffect(() => {
     setSessionCode(sessionCode);
   }, [sessionCode, setSessionCode]);
 
   useEffect(() => {
-    if (typeof window === "undefined") return;
-    const key = `bubbly:nickname:${sessionCode}`;
-    const stored = window.localStorage.getItem(key);
-    if (stored) {
-      setNickname(stored);
-      setNicknameInput(stored);
-    } else {
-      setNickname("");
-      const generated = generateNickname();
-      setNicknameInput(generated);
+    if (session?.title) {
+      setSessionTitle(session.title);
     }
-    setNicknameInitialized(true);
-  }, [sessionCode, setNickname]);
+    return () => {
+      setSessionTitle(null);
+    };
+  }, [session?.title, setSessionTitle]);
 
   useEffect(() => {
     if (typeof window === "undefined") return;
@@ -100,6 +114,121 @@ export function RoomView({ sessionCode }: RoomViewProps) {
     session?.hostUid && user?.uid && session.hostUid === user.uid
   );
 
+  const isQuestionSubmissionAllowed = useMemo(() => {
+    if (!session?.isActive) return false;
+    const now = Date.now();
+    if (now < session.startDate) return false;
+    if (now > session.endDate) return false;
+    return true;
+  }, [session?.isActive, session?.startDate, session?.endDate]);
+
+  const isBeforeEndDate = useMemo(() => {
+    if (!session) return false;
+    const now = Date.now();
+    return now < session.endDate;
+  }, [session?.endDate]);
+
+  const endSessionMutation = useMutation({
+    mutationFn: () => endSession(sessionCode),
+    onSuccess: () => {
+      toast.success("방이 종료되었습니다.");
+      queryClient.invalidateQueries({ queryKey: ["session", sessionCode] });
+    },
+    onError: () => {
+      toast.error("방 종료에 실패했습니다.");
+    },
+  });
+
+  const reactivateSessionMutation = useMutation({
+    mutationFn: () => reactivateSession(sessionCode),
+    onSuccess: () => {
+      toast.success("방이 다시 활성화되었습니다.");
+      queryClient.invalidateQueries({ queryKey: ["session", sessionCode] });
+    },
+    onError: () => {
+      toast.error("방 재활성화에 실패했습니다.");
+    },
+  });
+
+  const handleOpenEditModal = () => {
+    if (session) {
+      setEditTitle(session.title);
+      const today = new Date();
+      const todayStr = `${today.getFullYear()}-${String(
+        today.getMonth() + 1
+      ).padStart(2, "0")}-${String(today.getDate()).padStart(2, "0")}`;
+
+      const startDate = new Date(session.startDate);
+      const startStr = `${startDate.getFullYear()}-${String(
+        startDate.getMonth() + 1
+      ).padStart(2, "0")}-${String(startDate.getDate()).padStart(2, "0")}`;
+      setEditStartDate(startStr);
+
+      const endDate = new Date(session.endDate);
+      const endStr = `${endDate.getFullYear()}-${String(
+        endDate.getMonth() + 1
+      ).padStart(2, "0")}-${String(endDate.getDate()).padStart(2, "0")}`;
+      setEditEndDate(endStr);
+    }
+    setIsEditModalOpen(true);
+  };
+
+  const updateSessionMutation = useMutation({
+    mutationFn: async () => {
+      const start = editStartDate
+        ? new Date(editStartDate).setHours(0, 0, 0, 0)
+        : undefined;
+      const end = editEndDate
+        ? new Date(editEndDate).setHours(23, 59, 59, 999)
+        : undefined;
+      if (start && end && start > end) {
+        throw new Error("시작 날짜가 종료 날짜보다 늦을 수 없습니다.");
+      }
+      return updateSession(sessionCode, {
+        title: editTitle.trim(),
+        startDate: start,
+        endDate: end,
+      });
+    },
+    onSuccess: (updatedSession: { title?: string } | undefined) => {
+      toast.success("방 정보가 수정되었습니다.");
+      setIsEditModalOpen(false);
+      if (updatedSession?.title) {
+        setSessionTitle(updatedSession.title);
+      }
+      queryClient.invalidateQueries({ queryKey: ["session", sessionCode] });
+    },
+    onError: (error: unknown) => {
+      if (error instanceof Error) {
+        toast.error(error.message);
+      } else {
+        toast.error("방 정보 수정에 실패했습니다.");
+      }
+    },
+  });
+
+  const deleteSessionMutation = useMutation({
+    mutationFn: () => {
+      if (!session?.hostUid) {
+        throw new Error("방 정보를 찾을 수 없습니다.");
+      }
+      return deleteSession(sessionCode, session.hostUid);
+    },
+    onSuccess: () => {
+      toast.success("방이 삭제되었습니다.");
+      setIsDeleteConfirmOpen(false);
+      queryClient.invalidateQueries({ queryKey: ["session", sessionCode] });
+      router.push("/");
+    },
+    onError: (error: unknown) => {
+      if (error instanceof Error) {
+        toast.error(error.message);
+      } else {
+        toast.error("방 삭제에 실패했습니다.");
+      }
+    },
+  });
+
   const pendingQuestions = useMemo(
     () => questions.filter((question) => question.status === "pending"),
     [questions]
@@ -113,18 +242,49 @@ export function RoomView({ sessionCode }: RoomViewProps) {
     [questions]
   );
 
-  const handleNicknameChange = (name: string) => {
-    const value = name.slice(0, 24);
-    setNickname(value);
-    const key = `bubbly:nickname:${sessionCode}`;
-    if (typeof window !== "undefined") {
-      window.localStorage.setItem(key, value);
+  const sortedApprovedQuestions = useMemo(() => {
+    const sorted = [...approvedQuestions];
+
+    if (viewerSortTab === "latest") {
+      // 최신순: 생성일자만 기준으로 정렬
+      sorted.sort((a, b) => b.createdAt - a.createdAt);
+    } else {
+      // 좋아요순: 하이라이트된 질문을 최상단에 배치
+      const highlightedQuestion = sorted.find((q) => q.highlighted);
+
+      if (!highlightedQuestion) {
+        // 하이라이트된 질문이 없으면 좋아요순으로 정렬
+        sorted.sort((a, b) => b.like - a.like);
+        return sorted;
+      }
+
+      // 하이라이트된 질문의 등록 시간 이후에 등록된 질문들
+      const afterHighlighted = sorted.filter(
+        (q) => !q.highlighted && q.createdAt > highlightedQuestion.createdAt
+      );
+
+      // 하이라이트된 질문 이전에 등록된 질문들
+      const beforeHighlighted = sorted.filter(
+        (q) => !q.highlighted && q.createdAt <= highlightedQuestion.createdAt
+      );
+
+      // 좋아요순으로 정렬
+      afterHighlighted.sort((a, b) => b.like - a.like);
+      beforeHighlighted.sort((a, b) => b.like - a.like);
+
+      // 하이라이트 이후 등록된 질문 → 하이라이트된 질문 → 나머지 순서로 배치
+      return [...afterHighlighted, highlightedQuestion, ...beforeHighlighted];
     }
-  };
+
+    return sorted;
+  }, [approvedQuestions, viewerSortTab]);
 
   const handleApprove = (id: string) => changeStatus(id, "approved");
   const handleReject = (id: string) => changeStatus(id, "archived");
-  const persistReactions = (next: Record<string, "like" | "love">) => {
+  const handleHighlight = (questionId: string, currentHighlighted: boolean) => {
+    toggleHighlight(questionId, !currentHighlighted);
+  };
+  const persistReactions = (next: Record<string, "like">) => {
     setReactionMap(next);
     if (typeof window !== "undefined") {
       window.localStorage.setItem(
@@ -134,73 +294,21 @@ export function RoomView({ sessionCode }: RoomViewProps) {
     }
   };
 
-  const handleReaction = (questionId: string, emoji: "like" | "love") => {
-    if (!user) {
-      setShowAuthDialog(true);
-      toast.error("리액션을 사용하려면 로그인해주세요.");
-      return;
-    }
+  const handleReaction = (questionId: string) => {
     const previous = reactionMap[questionId];
-    if (previous === emoji) {
-      toast("이미 선택한 리액션입니다.");
-      return;
-    }
-    if (previous) {
-      reaction(questionId, previous, -1);
-    }
-    reaction(questionId, emoji, 1);
-    persistReactions({
-      ...reactionMap,
-      [questionId]: emoji,
-    });
-  };
-
-  const handleSignIn = async () => {
-    try {
-      await signInWithGoogle();
-      toast.success("로그인 되었습니다.");
-      setShowAuthDialog(false);
-    } catch (error) {
-      console.error(error);
-      toast.error("로그인에 실패했습니다.");
-    }
-  };
-
-  const handleSaveNickname = () => {
-    const value = nicknameInput.trim();
-    if (!value) {
-      toast.error("닉네임을 입력해주세요.");
-      return;
-    }
-    handleNicknameChange(value);
-    setIsNicknameModalOpen(false);
-  };
-
-  const regenerateNickname = () => {
-    const generated = generateNickname();
-    setNicknameInput(generated);
-  };
-
-  useEffect(() => {
-    if (!nicknameInitialized) return;
-    if (!user) {
-      setShowAuthDialog(true);
-      setIsNicknameModalOpen(false);
-      return;
-    }
-    setShowAuthDialog(false);
-    if (!isHost && !nickname.trim()) {
-      setIsNicknameModalOpen(true);
+    if (previous === "like") {
+      // 좋아요 취소
+      reaction(questionId, -1);
+      const { [questionId]: _removed, ...rest } = reactionMap;
+      persistReactions(rest);
     } else {
-      setIsNicknameModalOpen(false);
+      // 좋아요 추가
+      reaction(questionId, 1);
+      persistReactions({
+        ...reactionMap,
+        [questionId]: "like",
+      });
     }
-  }, [isHost, nickname, nicknameInitialized, user]);
-
-  const preventModalClose = (open: boolean) => {
-    if (!open) {
-      if (!nickname.trim()) return;
-    }
-    setIsNicknameModalOpen(open);
   };
 
   const shareUrl =
@@ -219,323 +327,464 @@ export function RoomView({ sessionCode }: RoomViewProps) {
 
   if (!session) {
     return (
-      <div className="flex min-h-screen items-center justify-center text-slate-400">
+      <div className="flex h-full items-center justify-center text-slate-400">
         존재하지 않는 방입니다.
       </div>
     );
   }
 
-  const renderHostPendingSection = () => {
-    if (!isHost) return null;
-    return (
-      <section className="space-y-3 rounded-3xl border border-white/5 bg-white/5 p-5 backdrop-blur-xl">
-        <div className="flex items-center justify-between">
-          <h2 className="text-lg font-semibold text-slate-100">
-            승인 대기 질문
-          </h2>
-          <span className="text-sm text-slate-400">
-            {pendingQuestions.length}개
-          </span>
-        </div>
-        {isFetching && !pendingQuestions.length ? (
-          <div className="space-y-3">
-            <QuestionSkeleton />
-            <QuestionSkeleton />
-          </div>
-        ) : pendingQuestions.length ? (
-          pendingQuestions.map((question: Question) => (
-            <QuestionCard
-              key={question.id}
-              question={question}
-              mode="host"
-              userReaction={reactionMap[question.id] ?? null}
-              onStatusChange={(status) => {
-                if (status === "approved") {
-                  handleApprove(question.id);
-                } else if (status === "archived") {
-                  handleReject(question.id);
-                }
-              }}
-              onReact={(emoji) => handleReaction(question.id, emoji)}
-              onComment={(message) =>
-                comment(question.id, {
-                  author: user?.displayName ?? session.hostDisplayName,
-                  content: message,
-                })
-              }
-              onDelete={() => remove(question.id)}
-            />
-          ))
-        ) : (
-          <div className="rounded-xl border border-dashed border-slate-800 p-6 text-center text-sm text-slate-400">
-            대기 중인 질문이 없습니다.
-          </div>
-        )}
-      </section>
-    );
-  };
-
   return (
-    <div className="relative mx-auto flex min-h-screen w-full max-w-5xl flex-col gap-6 overflow-hidden px-4 py-10">
-      <div className="pointer-events-none absolute inset-0">
-        {bubbleConfig.map((bubble, index) => (
-          <span
-            key={index}
-            className="bubble"
-            style={{
-              left: `${bubble.left}%`,
-              bottom: `${-bubble.size / 2}px`,
-              width: `${bubble.size}px`,
-              height: `${bubble.size}px`,
-              opacity: bubble.opacity,
-              animationDuration: `${bubble.duration}s`,
-              animationDelay: `${bubble.delay}s`,
-            }}
-          />
-        ))}
-      </div>
+    <div className="relative mx-auto flex w-full min-h-full max-w-5xl flex-col gap-6 px-4">
+      {isQuestionSubmissionAllowed && session.isActive && (
+        <QuestionForm sessionCode={sessionCode} />
+      )}
 
-      <header className="flex flex-col gap-4 rounded-3xl border border-white/10 bg-white/5 p-5 backdrop-blur-xl sm:flex-row sm:items-center sm:justify-between">
-        <div>
-          <h1 className="text-3xl font-black tracking-tight text-white drop-shadow-lg">
-            {session.title || "제목 없는 세션"}
-          </h1>
-          <p className="text-xs text-slate-200/60">
-            진행자 {session.hostDisplayName} ·{" "}
-            {new Date(session.createdAt).toLocaleString("ko-KR", {
-              dateStyle: "medium",
-              timeStyle: "short",
-            })}
-          </p>
-        </div>
-        <div className="flex flex-wrap items-center gap-2">
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={() => setIsDetailsOpen(true)}
-          >
-            방 상세보기
-          </Button>
-        </div>
-      </header>
-
-      {!session.isActive ? (
-        <div className="rounded-xl border border-slate-800 bg-slate-900/60 p-4 text-center text-sm text-slate-400">
-          이 방은 현재 비활성화 상태입니다.
-        </div>
-      ) : null}
-
-      {isHost ? renderHostPendingSection() : null}
-
-      <section className="space-y-3 rounded-3xl border border-white/5 bg-white/5 p-5 backdrop-blur-xl">
-        <div className="flex items-center justify-between">
-          <h2 className="text-lg font-semibold text-slate-100">공개된 질문</h2>
-          <span className="text-sm text-slate-400">
-            {approvedQuestions.length}개
-          </span>
-        </div>
-        {isFetching && !approvedQuestions.length ? (
-          <div className="space-y-3">
-            <QuestionSkeleton />
-            <QuestionSkeleton />
-            <QuestionSkeleton />
-          </div>
-        ) : approvedQuestions.length ? (
-          approvedQuestions.map((question: Question) => (
-            <QuestionCard
-              key={question.id}
-              question={question}
-              mode={isHost ? "host" : "viewer"}
-              userReaction={reactionMap[question.id] ?? null}
-              onStatusChange={(status) => {
-                if (!isHost) return;
-                if (status === "approved") {
-                  handleApprove(question.id);
-                } else if (status === "archived") {
-                  handleReject(question.id);
-                }
-              }}
-              onReact={(emoji) => handleReaction(question.id, emoji)}
-              onComment={
-                isHost || nickname
-                  ? (message) =>
-                      comment(question.id, {
-                        author: isHost
-                          ? user?.displayName ?? session.hostDisplayName
-                          : nickname || "익명",
-                        content: message,
-                      })
-                  : undefined
+      {isHost ? (
+        <section className="space-y-4">
+          <div className="flex items-center justify-between gap-4">
+            <Tabs
+              value={hostTab}
+              onValueChange={(value) =>
+                setHostTab(value as "pending" | "approved" | "archived" | "all")
               }
-              onDelete={isHost ? () => remove(question.id) : undefined}
-            />
-          ))
-        ) : (
-          <div className="rounded-xl border border-dashed border-slate-800 p-6 text-center text-sm text-slate-400">
-            아직 공개된 질문이 없습니다.
+            >
+              <TabsList>
+                <TabsTrigger value="all" className="relative">
+                  전체
+                  <span className="ml-2 rounded-full bg-slate-500/20 px-2 py-0.5 text-xs text-slate-300">
+                    {questions.length}
+                  </span>
+                </TabsTrigger>
+                <TabsTrigger value="pending" className="relative">
+                  대기
+                  <span
+                    className={cn(
+                      "ml-2 rounded-full px-2 py-0.5 text-xs",
+                      pendingQuestions.length > 0
+                        ? "bg-amber-500/20 text-amber-300"
+                        : "bg-slate-500/20 text-slate-300"
+                    )}
+                  >
+                    {pendingQuestions.length}
+                  </span>
+                </TabsTrigger>
+                <TabsTrigger value="approved" className="relative">
+                  승인
+                  <span className="ml-2 rounded-full bg-slate-500/20 px-2 py-0.5 text-xs text-slate-300">
+                    {approvedQuestions.length}
+                  </span>
+                </TabsTrigger>
+                <TabsTrigger value="archived" className="relative">
+                  반려
+                  <span className="ml-2 rounded-full bg-slate-500/20 px-2 py-0.5 text-xs text-slate-300">
+                    {archivedQuestions.length}
+                  </span>
+                </TabsTrigger>
+              </TabsList>
+            </Tabs>
+            {hostTab !== "all" && (
+              <span className="text-sm text-slate-400">
+                {questions.length}개
+              </span>
+            )}
           </div>
-        )}
-      </section>
 
-      {isHost && archivedQuestions.length ? (
-        <section className="space-y-3 rounded-3xl border border-white/5 bg-white/5 p-5 backdrop-blur-xl">
-          <div className="flex items-center justify-between">
-            <h2 className="text-lg font-semibold text-slate-100">
-              반려된 질문
-            </h2>
+          <Tabs value={hostTab}>
+            <TabsContent value="all">
+              {isFetching && !questions.length ? (
+                <div className="space-y-3">
+                  <QuestionSkeleton />
+                  <QuestionSkeleton />
+                  <QuestionSkeleton />
+                </div>
+              ) : questions.length ? (
+                <div className="space-y-3">
+                  {questions.map((question: Question) => (
+                    <QuestionCard
+                      key={question.id}
+                      question={question}
+                      mode="host"
+                      userReaction={reactionMap[question.id] ?? null}
+                      onStatusChange={(status) => {
+                        if (status === "approved") {
+                          handleApprove(question.id);
+                        } else if (status === "archived") {
+                          handleReject(question.id);
+                        }
+                      }}
+                      onReact={() => handleReaction(question.id)}
+                      onDelete={() => remove(question.id)}
+                      onHighlight={() =>
+                        handleHighlight(
+                          question.id,
+                          question.highlighted ?? false
+                        )
+                      }
+                    />
+                  ))}
+                </div>
+              ) : (
+                <div className="rounded-xl border border-dashed border-slate-800 p-6 text-center text-sm text-slate-400">
+                  질문이 없습니다.
+                </div>
+              )}
+            </TabsContent>
+
+            <TabsContent value="pending">
+              {isFetching && !pendingQuestions.length ? (
+                <div className="space-y-3">
+                  <QuestionSkeleton />
+                  <QuestionSkeleton />
+                </div>
+              ) : pendingQuestions.length ? (
+                pendingQuestions.map((question: Question) => (
+                  <QuestionCard
+                    key={question.id}
+                    question={question}
+                    mode="host"
+                    userReaction={reactionMap[question.id] ?? null}
+                    onStatusChange={(status) => {
+                      if (status === "approved") {
+                        handleApprove(question.id);
+                      } else if (status === "archived") {
+                        handleReject(question.id);
+                      }
+                    }}
+                    onReact={() => handleReaction(question.id)}
+                    onDelete={() => remove(question.id)}
+                    onHighlight={() =>
+                      handleHighlight(
+                        question.id,
+                        question.highlighted ?? false
+                      )
+                    }
+                  />
+                ))
+              ) : (
+                <div className="rounded-xl border border-dashed border-slate-800 p-6 text-center text-sm text-slate-400">
+                  대기 중인 질문이 없습니다.
+                </div>
+              )}
+            </TabsContent>
+
+            <TabsContent value="approved">
+              {isFetching && !approvedQuestions.length ? (
+                <>
+                  <QuestionSkeleton />
+                  <QuestionSkeleton />
+                  <QuestionSkeleton />
+                </>
+              ) : approvedQuestions.length ? (
+                approvedQuestions.map((question: Question) => (
+                  <QuestionCard
+                    key={question.id}
+                    question={question}
+                    mode="host"
+                    userReaction={reactionMap[question.id] ?? null}
+                    onStatusChange={(status) => {
+                      if (status === "approved") {
+                        handleApprove(question.id);
+                      } else if (status === "archived") {
+                        handleReject(question.id);
+                      }
+                    }}
+                    onReact={() => handleReaction(question.id)}
+                    onDelete={() => remove(question.id)}
+                    onHighlight={() =>
+                      handleHighlight(
+                        question.id,
+                        question.highlighted ?? false
+                      )
+                    }
+                  />
+                ))
+              ) : (
+                <div className="rounded-xl border border-dashed border-slate-800 p-6 text-center text-sm text-slate-400">
+                  아직 공개된 질문이 없습니다.
+                </div>
+              )}
+            </TabsContent>
+
+            <TabsContent value="archived">
+              {archivedQuestions.length ? (
+                <div className="space-y-3">
+                  {archivedQuestions.map((question: Question) => (
+                    <QuestionCard
+                      key={question.id}
+                      question={question}
+                      mode="host"
+                      userReaction={reactionMap[question.id] ?? null}
+                      onStatusChange={(status) => {
+                        if (status === "approved") {
+                          handleApprove(question.id);
+                        }
+                      }}
+                      onReact={() => handleReaction(question.id)}
+                      onDelete={() => remove(question.id)}
+                    />
+                  ))}
+                </div>
+              ) : (
+                <div className="rounded-xl border border-dashed border-slate-800 p-6 text-center text-sm text-slate-400">
+                  반려된 질문이 없습니다.
+                </div>
+              )}
+            </TabsContent>
+          </Tabs>
+        </section>
+      ) : (
+        <section className="space-y-4">
+          <div className="flex items-center justify-between gap-4">
+            <Tabs
+              value={viewerSortTab}
+              onValueChange={(value) =>
+                setViewerSortTab(value as "latest" | "popular")
+              }
+            >
+              <TabsList>
+                <TabsTrigger value="latest">최신순</TabsTrigger>
+                <TabsTrigger value="popular">좋아요순</TabsTrigger>
+              </TabsList>
+            </Tabs>
             <span className="text-sm text-slate-400">
-              {archivedQuestions.length}개
+              {approvedQuestions.length}개
             </span>
           </div>
-          <div className="space-y-3">
-            {archivedQuestions.map((question: Question) => (
-              <QuestionCard
-                key={question.id}
-                question={question}
-                mode="host"
-                userReaction={reactionMap[question.id] ?? null}
-                onStatusChange={(status) => {
-                  if (status === "approved") {
-                    handleApprove(question.id);
-                  }
-                }}
-                onReact={(emoji) => handleReaction(question.id, emoji)}
-                onComment={(message) =>
-                  comment(question.id, {
-                    author: user?.displayName ?? session.hostDisplayName,
-                    content: message,
-                  })
-                }
-                onDelete={() => remove(question.id)}
-              />
-            ))}
-          </div>
+
+          <Tabs value={viewerSortTab}>
+            <TabsContent value="latest">
+              {isFetching && !sortedApprovedQuestions.length ? (
+                <div className="space-y-3">
+                  <QuestionSkeleton />
+                  <QuestionSkeleton />
+                  <QuestionSkeleton />
+                </div>
+              ) : sortedApprovedQuestions.length ? (
+                <div className="space-y-3">
+                  {sortedApprovedQuestions.map((question: Question) => (
+                    <QuestionCard
+                      key={question.id}
+                      question={question}
+                      mode="viewer"
+                      userReaction={reactionMap[question.id] ?? null}
+                      onReact={() => handleReaction(question.id)}
+                    />
+                  ))}
+                </div>
+              ) : (
+                <div className="rounded-xl border border-dashed border-slate-800 p-6 text-center text-sm text-slate-400">
+                  아직 공개된 질문이 없습니다.
+                </div>
+              )}
+            </TabsContent>
+            <TabsContent value="popular">
+              {isFetching && !sortedApprovedQuestions.length ? (
+                <div className="space-y-3">
+                  <QuestionSkeleton />
+                  <QuestionSkeleton />
+                  <QuestionSkeleton />
+                </div>
+              ) : sortedApprovedQuestions.length ? (
+                <div className="space-y-3">
+                  {sortedApprovedQuestions.map((question: Question) => (
+                    <QuestionCard
+                      key={question.id}
+                      question={question}
+                      mode="viewer"
+                      userReaction={reactionMap[question.id] ?? null}
+                      onReact={() => handleReaction(question.id)}
+                    />
+                  ))}
+                </div>
+              ) : (
+                <div className="rounded-xl border border-dashed border-slate-800 p-6 text-center text-sm text-slate-400">
+                  아직 공개된 질문이 없습니다.
+                </div>
+              )}
+            </TabsContent>
+          </Tabs>
         </section>
-      ) : null}
+      )}
 
-      {!isHost && user && nickname ? (
-        <div className="rounded-3xl border border-white/5 bg-white/5 p-5 backdrop-blur-xl">
-          <QuestionForm
-            sessionCode={sessionCode}
-            disabled={!session.isActive}
-            nickname={nickname}
+      {isRoomDrawerOpen ? (
+        <>
+          <div
+            className="fixed inset-0 z-40 bg-black/40 transition-opacity animate-in fade-in duration-200"
+            onClick={() => setRoomDrawerOpen(false)}
           />
-        </div>
-      ) : null}
-
-      <Dialog open={isDetailsOpen} onOpenChange={setIsDetailsOpen}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>방 상세 정보</DialogTitle>
-            <DialogDescription>
-              방 코드와 공유 링크, 진행자 정보를 확인할 수 있습니다.
-            </DialogDescription>
-          </DialogHeader>
-          <div className="space-y-4 py-4 text-sm text-slate-300">
-            <div>
-              <span className="text-xs text-slate-500">방 코드</span>
-              <div className="mt-1 flex items-center justify-between rounded-lg border border-slate-800 bg-slate-900 px-3 py-2">
-                <span className="font-mono text-base text-white">
-                  {sessionCode}
-                </span>
-                <Button variant="outline" size="sm" onClick={copyShareUrl}>
-                  <Share2 className="mr-2 h-4 w-4" />
-                  {shareCopied ? "복사됨!" : "주소 복사"}
-                </Button>
-              </div>
-            </div>
-            <div>
-              <span className="text-xs text-slate-500">진행자</span>
-              <div className="mt-1 flex items-center gap-2 text-white">
-                {session.hostDisplayName}
-                {session.isActive ? (
-                  <span className="rounded-full border border-emerald-500 px-2 py-0.5 text-xs text-emerald-300">
-                    진행 중
-                  </span>
-                ) : (
-                  <span className="rounded-full border border-slate-700 px-2 py-0.5 text-xs text-slate-400">
-                    종료됨
-                  </span>
+          <aside className="max-h-[calc(100vh-61px)] overflow-y-auto fixed left-0 top-[61px] bottom-0 z-50 w-80 max-w-[80%] border-r border-white/10 bg-slate-950/95 px-4 py-6 shadow-xl backdrop-blur-xl transition-transform animate-in slide-in-from-left duration-300">
+            <div className="flex items-center justify-between">
+              <h2 className="text-sm font-semibold text-slate-100">
+                방 상세 정보
+              </h2>
+              <div className="flex items-center gap-2">
+                {isHost && (
+                  <Button
+                    size="sm"
+                    variant="ghost"
+                    className="text-xs text-slate-400 hover:text-slate-100"
+                    onClick={handleOpenEditModal}
+                  >
+                    <Edit2 className="mr-1 h-3 w-3" />
+                    수정
+                  </Button>
                 )}
               </div>
             </div>
-            <div className="rounded-lg border border-slate-800 bg-slate-900/40 p-3 text-xs text-slate-400">
-              <p> • 승인된 질문만 공개 탭에 노출됩니다.</p>
-              <p> • 리액션은 좋아요/공감 두 가지만 제공됩니다.</p>
-              <p> • 댓글은 간결하게 작성해주세요.</p>
+            <div className="mt-4 space-y-4 text-sm text-slate-300">
+              <div>
+                <span className="text-xs text-slate-500">방 코드</span>
+                <div className="mt-1 flex items-center justify-between rounded-lg border border-slate-800 bg-slate-900 px-3 py-2">
+                  <span className="font-mono text-base text-white">
+                    {sessionCode}
+                  </span>
+                  <Button variant="outline" size="sm" onClick={copyShareUrl}>
+                    <Share2 className="mr-2 h-4 w-4" />
+                    {shareCopied ? "복사됨!" : "복사"}
+                  </Button>
+                </div>
+              </div>
+              <div>
+                <span className="text-xs text-slate-500">방 이름</span>
+                <div className="mt-1 text-sm text-white">{session.title}</div>
+              </div>
+              <div>
+                <span className="text-xs text-slate-500">진행자</span>
+                <div className="mt-1 flex items-center gap-2 text-white">
+                  {session.hostDisplayName}
+                  {session.isActive ? (
+                    <span className="rounded-full border border-emerald-500 px-2 py-0.5 text-xs text-emerald-300">
+                      진행 중
+                    </span>
+                  ) : (
+                    <span className="rounded-full border border-slate-700 px-2 py-0.5 text-xs text-slate-400">
+                      종료됨
+                    </span>
+                  )}
+                </div>
+              </div>
+              <div>
+                <span className="text-xs text-slate-500">질문 등록 기간</span>
+                <div className="mt-1 space-y-1 text-sm text-white">
+                  <div>
+                    시작:{" "}
+                    {new Date(session.startDate).toLocaleDateString("ko-KR", {
+                      year: "numeric",
+                      month: "short",
+                      day: "numeric",
+                    })}
+                  </div>
+                  <div>
+                    종료:{" "}
+                    {new Date(session.endDate).toLocaleDateString("ko-KR", {
+                      year: "numeric",
+                      month: "long",
+                      day: "numeric",
+                    })}
+                  </div>
+                </div>
+              </div>
+              <div className="rounded-lg border border-slate-800 bg-slate-900/40 p-3 text-xs text-slate-400">
+                <p> • 진행자에게 승인된 질문만 공개됩니다.</p>
+                <p>• 종료 기한 이후엔 질문을 등록할 수 없습니다.</p>
+                {isHost ? (
+                  <>
+                    <p>• 방 종료는 종료 기한 전에만 가능합니다.</p>
+                    <p>• 종료된 방도 종료 기한 전까지는 재개할 수 있습니다.</p>
+                  </>
+                ) : null}
+              </div>
+              {isHost ? (
+                <div className="space-y-3 border-t border-slate-800 pt-4">
+                  {session.isActive && isBeforeEndDate ? (
+                    <Button
+                      variant="outline"
+                      onClick={() => endSessionMutation.mutate()}
+                      disabled={endSessionMutation.isPending}
+                      className="w-full gap-2 text-red-400 hover:text-red-300 hover:border-red-500"
+                    >
+                      <XCircle className="h-4 w-4" />방 종료
+                    </Button>
+                  ) : null}
+                  {!session.isActive && isBeforeEndDate ? (
+                    <Button
+                      variant="outline"
+                      onClick={() => reactivateSessionMutation.mutate()}
+                      disabled={reactivateSessionMutation.isPending}
+                      className="w-full gap-2 text-emerald-400 hover:text-emerald-300 hover:border-emerald-500"
+                    >
+                      <PlayCircle className="h-4 w-4" />방 재개
+                    </Button>
+                  ) : null}
+                  <Button
+                    variant="outline"
+                    onClick={() => setIsDeleteConfirmOpen(true)}
+                    disabled={deleteSessionMutation.isPending}
+                    className="w-full gap-2 text-red-400 hover:text-red-300 hover:border-red-500"
+                  >
+                    <Trash2 className="h-4 w-4" />방 삭제
+                  </Button>
+                </div>
+              ) : null}
             </div>
-          </div>
-        </DialogContent>
-      </Dialog>
+          </aside>
+        </>
+      ) : null}
 
-      {!isHost && user ? (
-        <Dialog open={isNicknameModalOpen} onOpenChange={preventModalClose}>
-          <DialogContent>
+      {isHost && (
+        <Dialog open={isEditModalOpen} onOpenChange={setIsEditModalOpen}>
+          <DialogContent className="max-w-md">
             <DialogHeader>
-              <DialogTitle>닉네임 설정</DialogTitle>
+              <DialogTitle>방 정보 수정</DialogTitle>
               <DialogDescription>
-                질문을 남기기 전에 사용할 닉네임을 입력하세요. 이후에도 수정할
-                수 있습니다.
-                <br />
-                진행자가 질문을 승인하면 모두에게 공개되는 실시간 Q&A
-                공간입니다.
+                방 이름만 수정할 수 있습니다. 질문 등록 기간은 변경할 수
+                없습니다.
               </DialogDescription>
             </DialogHeader>
-            <div className="space-y-3 py-4">
-              <Input
-                value={nicknameInput}
-                onChange={(event) => setNicknameInput(event.target.value)}
-                maxLength={24}
-                placeholder="닉네임을 입력하세요"
+            <div className="space-y-4 py-4">
+              <SessionTitleInput
+                value={editTitle}
+                onChange={setEditTitle}
+                placeholder="방 이름을 입력하세요"
               />
-              <div className="flex items-center justify-between text-xs text-slate-500">
-                <span>랜덤 닉네임이 마음에 들지 않으면 다시 생성해보세요.</span>
-                <Button
-                  type="button"
-                  variant="ghost"
-                  size="sm"
-                  onClick={regenerateNickname}
-                  className="text-brand hover:text-brand-foreground"
-                >
-                  <RefreshCw className="mr-1 h-3.5 w-3.5" />
-                  다시 생성
-                </Button>
-              </div>
+              <DateRangeInputs
+                startDate={editStartDate}
+                endDate={editEndDate}
+                onStartDateChange={setEditStartDate}
+                onEndDateChange={setEditEndDate}
+                readOnly
+                required
+              />
             </div>
-            <div className="flex justify-end">
-              <Button onClick={handleSaveNickname}>확인</Button>
+            <div className="flex justify-end gap-2">
+              <Button variant="ghost" onClick={() => setIsEditModalOpen(false)}>
+                취소
+              </Button>
+              <Button
+                onClick={() => updateSessionMutation.mutate()}
+                disabled={!editTitle.trim() || updateSessionMutation.isPending}
+              >
+                <Save className="mr-2 h-4 w-4" />
+                저장
+              </Button>
             </div>
           </DialogContent>
         </Dialog>
-      ) : null}
+      )}
 
-      <Dialog open={showAuthDialog} onOpenChange={setShowAuthDialog}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>로그인이 필요합니다</DialogTitle>
-            <DialogDescription>
-              질문을 남기거나 리액션/댓글을 작성하려면 Google 계정으로
-              로그인해주세요.
-            </DialogDescription>
-          </DialogHeader>
-          <div className="space-y-2 py-4 text-sm text-slate-300">
-            <p>
-              로그인하면 현재 브라우저에서 해당 닉네임과 활동이 유지됩니다.
-              방장은 승인/반려 작업을 수행하고, 참가자는 승인 대기 또는 공개
-              질문에 리액션과 댓글을 남길 수 있습니다.
-            </p>
-          </div>
-          <div className="flex justify-end gap-2">
-            <Button variant="ghost" onClick={() => setShowAuthDialog(false)}>
-              닫기
-            </Button>
-            <Button onClick={handleSignIn}>
-              <LogIn className="mr-2 h-4 w-4" />
-              Google로 로그인
-            </Button>
-          </div>
-        </DialogContent>
-      </Dialog>
+      {isHost && (
+        <ConfirmDialog
+          open={isDeleteConfirmOpen}
+          onOpenChange={setIsDeleteConfirmOpen}
+          title="방 삭제 확인"
+          description="방을 삭제하면 모든 질문이 영구적으로 삭제됩니다. 이 작업은 되돌릴 수 없습니다. 정말로 이 방을 삭제하시겠습니까?"
+          confirmText="삭제"
+          cancelText="취소"
+          variant="destructive"
+          onConfirm={() => deleteSessionMutation.mutate()}
+          isLoading={deleteSessionMutation.isPending}
+        />
+      )}
     </div>
   );
 }

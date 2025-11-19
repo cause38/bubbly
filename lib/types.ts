@@ -1,10 +1,5 @@
 export type QuestionStatus = "pending" | "approved" | "answered" | "archived";
 
-export interface QuestionReaction {
-  like: number;
-  love: number;
-}
-
 export interface QuestionComment {
   id: string;
   author: string;
@@ -20,9 +15,10 @@ export interface QuestionPayload {
 export interface Question extends QuestionPayload {
   id: string;
   status: QuestionStatus;
-  reaction: QuestionReaction;
+  like: number;
   comments: QuestionComment[];
   createdAt: number;
+  highlighted?: boolean;
 }
 
 export interface SessionState {
@@ -31,8 +27,9 @@ export interface SessionState {
   isActive: boolean;
   createdAt: number;
   endedAt?: number;
+  startDate: number;
+  endDate: number;
   hostUid: string;
   hostDisplayName: string;
   hostEmail?: string | null;
 }
-

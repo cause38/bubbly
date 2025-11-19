@@ -2,22 +2,11 @@
 
 import { Suspense, useState } from "react";
 import { useRouter } from "next/navigation";
-import { useMutation } from "@tanstack/react-query";
-import {
-  ArrowRight,
-  CalendarClock,
-  KeyRound,
-  Link2,
-  LogIn,
-  PlusCircle,
-} from "lucide-react";
+import { ArrowRight, CalendarClock, KeyRound, Link2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { createSession } from "@/lib/questions";
-import { signInWithGoogle, signOutUser } from "@/lib/firebase";
 import { useSessionStore } from "@/lib/stores/session-store";
 import { toast } from "sonner";
-import type { SessionState } from "@/lib/types";
 import { useHostSessions } from "@/hooks/useHostSessions";
 
 export function HomeView() {
@@ -26,50 +15,6 @@ export function HomeView() {
     user: state.user,
   }));
   const [joinCode, setJoinCode] = useState("");
-  const [title, setTitle] = useState("");
-
-  const createSessionMutation = useMutation<SessionState>({
-    mutationFn: async () => {
-      if (!user) {
-        throw new Error("로그인이 필요합니다.");
-      }
-      if (!title.trim()) {
-        throw new Error("세션 제목을 입력해주세요.");
-      }
-      return createSession(
-        {
-          uid: user.uid,
-          displayName: user.displayName,
-          email: user.email,
-        },
-        title.trim()
-      );
-    },
-    onSuccess: (session: SessionState) => {
-      toast.success("새로운 방이 생성되었습니다!");
-      setTitle("");
-      router.push(`/room/${session.code}`);
-    },
-    onError: (error: unknown) => {
-      if (error instanceof Error) {
-        toast.error(error.message);
-      } else {
-        toast.error("방 생성에 실패했습니다.");
-      }
-    },
-  });
-
-  const handleCreateSession = () => {
-    if (!user) {
-      toast.error("먼저 진행자 계정으로 로그인해주세요.");
-      return;
-    }
-    if (!title.trim()) {
-      toast.error("세션 제목을 입력해주세요.");
-      return;
-    }
-    createSessionMutation.mutate();
-  };
 
   const handleJoin = (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
@@ -81,91 +26,9 @@ export function HomeView() {
     router.push(`/room/${code}`);
   };
 
-  const handleSignIn = async () => {
-    try {
-      await signInWithGoogle();
-      toast.success("로그인 되었습니다.");
-    } catch (error) {
-      console.error(error);
-      toast.error("로그인에 실패했습니다.");
-    }
-  };
-
-  const handleSignOut = async () => {
-    try {
-      await signOutUser();
-      toast.success("로그아웃 되었습니다.");
-    } catch (error) {
-      console.error(error);
-      toast.error("로그아웃에 실패했습니다.");
-    }
-  };
-
   return (
-    <div className="mx-auto flex min-h-screen w-full max-w-4xl flex-col gap-10 px-4 py-16">
-      <section className="grid gap-6 md:grid-cols-2">
-        <div className="space-y-4 rounded-2xl border border-slate-800 bg-slate-950/60 p-6">
-          <div className="flex items-center gap-2 text-slate-200">
-            <PlusCircle className="h-5 w-5 text-brand" />
-            <h2 className="text-xl font-semibold">새 방 만들기</h2>
-          </div>
-          <p className="text-sm text-slate-400">
-            진행자는 Google 계정으로 로그인 후 새로운 Q&A 방을 만들고, 링크를
-            참가자와 공유할 수 있습니다.
-          </p>
-
-          <div className="space-y-3">
-            <div className="space-y-1">
-              <span className="text-xs font-medium text-slate-400">
-                세션 제목
-              </span>
-              <Input
-                value={title}
-                onChange={(event) => setTitle(event.target.value)}
-                placeholder="예: 3월 전체 미팅 Q&A"
-              />
-            </div>
-            <div className="rounded-xl border border-slate-800 bg-slate-900/50 p-4 text-sm text-slate-300">
-              <p className="font-medium">진행자 로그인</p>
-              {user ? (
-                <div className="mt-2 flex items-center justify-between gap-2">
-                  <span className="text-xs text-slate-400">
-                    {user.displayName ?? user.email ?? "로그인됨"}
-                  </span>
-                  <Button size="sm" variant="ghost" onClick={handleSignOut}>
-                    로그아웃
-                  </Button>
-                </div>
-              ) : (
-                <Button
-                  size="sm"
-                  variant="outline"
-                  onClick={handleSignIn}
-                  className="mt-3"
-                >
-                  <LogIn className="mr-2 h-4 w-4" />
-                  Google로 로그인
-                </Button>
-              )}
-            </div>
-          </div>
-
-          <Button
-            disabled={!user || !title.trim() || createSessionMutation.isPending}
-            onClick={handleCreateSession}
-            className="w-full"
-          >
-            {createSessionMutation.isPending
-              ? "방 생성 중..."
-              : "새 Q&A 방 만들기"}
-          </Button>
-
-          <p className="text-xs text-slate-500">
-            방을 생성한 진행자는 자동으로 방장으로 지정되며, 이후 해당
-            계정으로만 질문 승인 및 반려가 가능합니다.
-          </p>
-        </div>
-
+    <div className="mx-auto flex h-full overflow-y-auto items-center justify-center w-full max-w-4xl flex-col gap-10 px-4">
+      <section className="grid gap-6">
         <div className="space-y-4 rounded-2xl border border-slate-800 bg-slate-950/60 p-6">
           <div className="flex items-center gap-2 text-slate-200">
             <KeyRound className="h-5 w-5 text-brand" />
@@ -181,6 +44,7 @@ export function HomeView() {
                 setJoinCode(event.target.value.toUpperCase())
               }
               placeholder="방 코드를 입력하세요 (예: ABC123)"
+              className="text-base"
               maxLength={12}
             />
             <Button type="submit" className="w-full" variant="secondary">
