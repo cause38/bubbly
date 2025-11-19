@@ -6,18 +6,22 @@ import type { FirebaseUser } from "@/lib/firebase";
 interface SessionStoreState {
   sessionCode: string | null;
   user: FirebaseUser | null;
-  nickname: string;
+  sessionTitle: string | null;
+  isRoomDrawerOpen: boolean;
   setSessionCode: (code: string) => void;
   setUser: (user: FirebaseUser | null) => void;
-  setNickname: (nickname: string) => void;
+  setSessionTitle: (title: string | null) => void;
+  setRoomDrawerOpen: (open: boolean) => void;
 }
 
 export const useSessionStore = create<SessionStoreState>(set => ({
   sessionCode: null,
   user: null,
-  nickname: "",
+  sessionTitle: null,
+  isRoomDrawerOpen: false,
   setSessionCode: code => set({ sessionCode: code }),
   setUser: user => set({ user }),
-  setNickname: nickname => set({ nickname })
+  setSessionTitle: title => set({ sessionTitle: title }),
+  setRoomDrawerOpen: open => set({ isRoomDrawerOpen: open })
 }));
 

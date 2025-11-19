@@ -11,22 +11,18 @@ import type { Question } from "@/lib/types";
 interface QuestionFormProps {
   sessionCode: string;
   disabled?: boolean;
-  nickname: string;
 }
 
 interface QuestionFormMutationVariables {
   content: string;
-  nickname: string;
 }
 
 const questionsKey = (sessionCode: string) =>
   ["questions", sessionCode] as const;
 
-export function QuestionForm({
-  sessionCode,
-  disabled,
-  nickname,
-}: QuestionFormProps) {
+const MAX_LENGTH = 150;
+
+export function QuestionForm({ sessionCode, disabled }: QuestionFormProps) {
   const [content, setContent] = useState("");
   const queryClient = useQueryClient();
 
@@ -36,11 +32,11 @@ export function QuestionForm({
     QuestionFormMutationVariables,
     { previous?: Question[] }
   >({
-    mutationFn: async ({ content, nickname }: QuestionFormMutationVariables) =>
+    mutationFn: async ({ content }: QuestionFormMutationVariables) =>
       submitQuestion(
         {
           content,
-          authorName: nickname,
+          authorName: "익명",
         },
         sessionCode
       ),
@@ -52,9 +48,9 @@ export function QuestionForm({
       const optimisticQuestion: Question = {
         id: `temp-${Date.now()}`,
         content: variables.content,
-        authorName: variables.nickname,
+        authorName: "익명",
         status: "pending",
-        reaction: { like: 0, love: 0 },
+        like: 0,
         comments: [],
         createdAt: Date.now(),
       };
@@ -89,19 +85,26 @@ export function QuestionForm({
     },
   });
 
+  const handleChange = (event: React.ChangeEvent<HTMLTextAreaElement>) => {
+    const value = event.target.value;
+    if (value.length <= MAX_LENGTH) {
+      setContent(value);
+    }
+  };
+
   const handleSubmit = (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
-    const trimmedNickname = nickname.trim();
+
     const trimmedContent = content.trim();
-    if (!trimmedNickname) {
-      toast.error("닉네임을 먼저 설정해주세요.");
-      return;
-    }
     if (!trimmedContent) {
       toast.error("질문 내용을 입력해주세요.");
       return;
     }
-    mutation.mutate({ content: trimmedContent, nickname: trimmedNickname });
+    if (trimmedContent.length > MAX_LENGTH) {
+      toast.error(`질문은 ${MAX_LENGTH}자까지만 입력 가능합니다.`);
+      return;
+    }
+    mutation.mutate({ content: trimmedContent });
   };
 
   const isPending = mutation.isPending;
@@ -109,20 +112,33 @@ export function QuestionForm({
   return (
     <form
       onSubmit={handleSubmit}
-      className="space-y-4 rounded-2xl border border-slate-800 bg-slate-950/70 p-6 shadow-xl"
+      className="group space-y-4 rounded-2xl border border-slate-800 bg-slate-950/70 p-5 shadow-xl"
     >
-      <div className="flex flex-col gap-2">
-        <label className="text-sm font-medium text-slate-200">질문 내용</label>
+      <div className="relative">
         <Textarea
-          placeholder="진행자에게 궁금한 점을 입력하세요"
+          placeholder="질문 내용을 입력하세요"
           value={content}
-          onChange={(event) => setContent(event.target.value)}
+          onChange={handleChange}
           disabled={disabled || isPending}
-          className="min-h-[140px]"
+          maxLength={MAX_LENGTH}
+          className="min-h-[24px] h-[24px] focus:min-h-[120px] transition-[min-height] text-base pr-12 pb-6"
         />
+        <div className="absolute bottom-0 right-0 text-xs text-slate-400 pointer-events-none">
+          <span className={content.length >= MAX_LENGTH ? "text-red-400" : ""}>
+            {content.length}
+          </span>
+          <span className="text-slate-500">/{MAX_LENGTH}</span>
+        </div>
       </div>
-      <div className="flex justify-end gap-2">
-        <Button type="submit" disabled={disabled || isPending}>
+      <div className="justify-end gap-2 hidden group-focus-within:flex">
+        <Button
+          type="submit"
+          disabled={disabled || isPending}
+          onMouseDown={(e) => {
+            // 버튼 클릭 시 포커스가 벗어나지 않도록 방지
+            e.preventDefault();
+          }}
+        >
           {isPending ? "전송 중..." : "질문 전송"}
         </Button>
       </div>

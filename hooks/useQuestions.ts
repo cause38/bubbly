@@ -3,14 +3,14 @@
 import { useEffect, useMemo } from "react";
 import { useMutation, useQueryClient, useSuspenseQuery } from "@tanstack/react-query";
 import {
-  addComment,
   addReaction,
   deleteQuestion,
   fetchQuestions,
+  toggleQuestionHighlight,
   updateQuestionStatus,
   watchQuestions
 } from "@/lib/questions";
-import type { Question, QuestionComment, QuestionStatus } from "@/lib/types";
+import type { Question, QuestionStatus } from "@/lib/types";
 
 interface UseQuestionsOptions {
   sessionCode: string;
@@ -101,19 +101,17 @@ export function useQuestions({ sessionCode, filter }: UseQuestionsOptions) {
   const reactionMutation = useMutation<
     void,
     unknown,
-    { questionId: string; emoji: "like" | "love"; delta: 1 | -1 },
+    { questionId: string; delta: 1 | -1 },
     { previous?: Question[] }
   >({
     mutationFn: ({
       questionId,
-      emoji,
       delta
     }: {
       questionId: string;
-      emoji: "like" | "love";
       delta: 1 | -1;
-    }) => addReaction(questionId, emoji, delta, sessionCode),
-    onMutate: async (variables: { questionId: string; emoji: "like" | "love"; delta: 1 | -1 }) => {
+    }) => addReaction(questionId, "like", delta, sessionCode),
+    onMutate: async (variables: { questionId: string; delta: 1 | -1 }) => {
       await queryClient.cancelQueries({ queryKey: questionsKey(sessionCode) });
       const previous = queryClient.getQueryData<Question[]>(questionsKey(sessionCode));
       if (previous) {
@@ -123,11 +121,7 @@ export function useQuestions({ sessionCode, filter }: UseQuestionsOptions) {
             question.id === variables.questionId
               ? {
                   ...question,
-                  reaction: {
-                    ...question.reaction,
-                    [variables.emoji]:
-                      (question.reaction[variables.emoji] ?? 0) + variables.delta
-                  }
+                  like: (question.like ?? 0) + variables.delta
                 }
               : question
           )
@@ -137,76 +131,8 @@ export function useQuestions({ sessionCode, filter }: UseQuestionsOptions) {
     },
     onError: (
       _error: unknown,
-      _variables:
-        | {
-            questionId: string;
-            emoji: "like" | "love";
-            delta: 1 | -1;
-          }
-        | undefined,
+      _variables: { questionId: string; delta: 1 | -1 } | undefined,
       context: { previous?: Question[] } | undefined
-    ) => {
-      if (context?.previous) {
-        queryClient.setQueryData(questionsKey(sessionCode), context.previous);
-      }
-    },
-    onSettled: () => {
-      queryClient.invalidateQueries({ queryKey: questionsKey(sessionCode) });
-    }
-  });
-
-  const commentMutation = useMutation<
-    QuestionComment | void,
-    unknown,
-    { questionId: string; author: string; content: string },
-    { previous?: Question[]; tempId: string }
-  >({
-    mutationFn: ({
-      questionId,
-      author,
-      content
-    }: {
-      questionId: string;
-      author: string;
-      content: string;
-    }) => addComment(questionId, { author, content }, sessionCode),
-    onMutate: async (variables: { questionId: string; author: string; content: string }) => {
-      await queryClient.cancelQueries({ queryKey: questionsKey(sessionCode) });
-      const previous = queryClient.getQueryData<Question[]>(questionsKey(sessionCode));
-      const tempId = `temp-comment-${Date.now()}`;
-      if (previous) {
-        queryClient.setQueryData<Question[]>(
-          questionsKey(sessionCode),
-          previous.map((question: Question) =>
-            question.id === variables.questionId
-              ? {
-                  ...question,
-                  comments: [
-                    ...question.comments,
-                    {
-                      id: tempId,
-                      author: variables.author,
-                      content: variables.content,
-                      createdAt: Date.now()
-                    }
-                  ]
-                }
-              : question
-          )
-        );
-      }
-      return { previous, tempId };
-    },
-    onError: (
-      _error: unknown,
-      _variables:
-        | {
-            questionId: string;
-            author: string;
-            content: string;
-          }
-        | undefined,
-      context: { previous?: Question[]; tempId: string } | undefined
     ) => {
       if (context?.previous) {
         queryClient.setQueryData(questionsKey(sessionCode), context.previous);
@@ -222,19 +148,61 @@ export function useQuestions({ sessionCode, filter }: UseQuestionsOptions) {
     return questions.filter(question => filter.includes(question.status));
   }, [filter, questions]);
 
+  const highlightMutation = useMutation<
+    void,
+    unknown,
+    { questionId: string; highlighted: boolean },
+    { previous?: Question[] }
+  >({
+    mutationFn: ({ questionId, highlighted }: { questionId: string; highlighted: boolean }) =>
+      toggleQuestionHighlight(questionId, highlighted, sessionCode),
+    onMutate: async (variables: { questionId: string; highlighted: boolean }) => {
+      await queryClient.cancelQueries({ queryKey: questionsKey(sessionCode) });
+      const previous = queryClient.getQueryData<Question[]>(questionsKey(sessionCode));
+      if (previous) {
+        queryClient.setQueryData<Question[]>(
+          questionsKey(sessionCode),
+          previous.map((question: Question) => {
+            // 하이라이트하려는 경우: 다른 공개된 질문들의 하이라이트 해제
+            if (variables.highlighted && question.status === "approved") {
+              if (question.id === variables.questionId) {
+                return { ...question, highlighted: true };
+              } else if (question.highlighted) {
+                return { ...question, highlighted: false };
+              }
+            } else if (question.id === variables.questionId) {
+              // 하이라이트 해제
+              return { ...question, highlighted: false };
+            }
+            return question;
+          })
+        );
+      }
+      return { previous };
+    },
+    onError: (
+      _error: unknown,
+      _variables: { questionId: string; highlighted: boolean } | undefined,
+      context: { previous?: Question[] } | undefined
+    ) => {
+      if (context?.previous) {
+        queryClient.setQueryData(questionsKey(sessionCode), context.previous);
+      }
+    },
+    onSettled: () => {
+      queryClient.invalidateQueries({ queryKey: questionsKey(sessionCode) });
+    }
+  });
+
   return {
     questions: filteredQuestions,
     isFetching,
-    reaction: (questionId: string, emoji: "like" | "love", delta: 1 | -1 = 1) =>
-      reactionMutation.mutate({ questionId, emoji, delta }),
-    comment: (questionId: string, payload: { author: string; content: string }) =>
-      commentMutation.mutate({
-        questionId,
-        author: payload.author,
-        content: payload.content
-      }),
+    reaction: (questionId: string, delta: 1 | -1 = 1) =>
+      reactionMutation.mutate({ questionId, delta }),
     changeStatus: (questionId: string, status: QuestionStatus) =>
       changeStatusMutation.mutate({ questionId, status }),
-    remove: (questionId: string) => deleteMutation.mutate(questionId)
+    remove: (questionId: string) => deleteMutation.mutate(questionId),
+    toggleHighlight: (questionId: string, highlighted: boolean) =>
+      highlightMutation.mutate({ questionId, highlighted })
   };
 }
