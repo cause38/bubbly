@@ -2,11 +2,12 @@
 @tailwind components;
 @tailwind utilities;
 
-:root {
-  color-scheme: dark;
+body {
+  @apply text-slate-900;
+  background: #ffffff;
 }
 
-body {
+.dark body {
   @apply text-slate-100;
   background: #090b1a;
 }
