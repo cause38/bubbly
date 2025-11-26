@@ -13,49 +13,49 @@ const getThemeClasses = (
 ) => {
   const themeMap = {
     amber: {
-      default: "bg-amber-600 text-white hover:bg-amber-700",
+      default: "bg-amber-600 text-white lg:hover:bg-amber-700",
       secondary:
-        "bg-amber-100 text-amber-700 hover:bg-amber-200 border border-amber-300 dark:bg-amber-900/30 dark:text-amber-300 dark:border-amber-700 dark:hover:bg-amber-900/50",
+        "bg-amber-100 text-amber-700 lg:hover:bg-amber-200 border border-amber-300 dark:bg-amber-900/30 dark:text-amber-300 dark:border-amber-700 lg:dark:hover:bg-amber-900/50",
       outline:
-        "border border-slate-300 bg-transparent text-slate-900 hover:border-amber-500 hover:text-amber-600 dark:border-slate-700 dark:text-slate-100 dark:hover:border-amber-500 dark:hover:text-amber-400",
+        "border border-slate-300 bg-transparent text-slate-900 lg:hover:border-amber-500 lg:hover:text-amber-600 dark:border-slate-700 dark:text-slate-100 lg:dark:hover:border-amber-500 lg:dark:hover:text-amber-400",
       ghost:
-        "bg-transparent text-slate-900 hover:bg-amber-50 hover:text-amber-600 dark:bg-transparent dark:text-slate-100 dark:hover:bg-amber-900/20 dark:hover:text-amber-400",
+        "bg-transparent text-slate-900 lg:hover:bg-amber-50 lg:hover:text-amber-600 dark:bg-transparent dark:text-slate-100 lg:dark:hover:bg-amber-900/20 lg:dark:hover:text-amber-400",
     },
     red: {
-      default: "bg-red-600 text-white hover:bg-red-700",
+      default: "bg-red-600 text-white lg:hover:bg-red-700",
       secondary:
-        "bg-red-100 text-red-700 hover:bg-red-200 border border-red-300 dark:bg-red-900/30 dark:text-red-300 dark:border-red-700 dark:hover:bg-red-900/50",
+        "bg-red-100 text-red-700 lg:hover:bg-red-200 border border-red-300 dark:bg-red-900/30 dark:text-red-300 dark:border-red-700 lg:dark:hover:bg-red-900/50",
       outline:
-        "border border-slate-300 bg-transparent text-slate-900 hover:border-red-500 hover:text-red-600 dark:border-slate-700 dark:text-slate-100 dark:hover:border-red-500 dark:hover:text-red-400",
+        "border border-slate-300 bg-transparent text-slate-900 lg:hover:border-red-500 lg:hover:text-red-600 dark:border-slate-700 dark:text-slate-100 lg:dark:hover:border-red-500 lg:dark:hover:text-red-400",
       ghost:
-        "bg-transparent text-slate-900 hover:bg-red-50 hover:text-red-600 dark:bg-transparent dark:text-slate-100 dark:hover:bg-red-900/20 dark:hover:text-red-400",
+        "bg-transparent text-slate-900 lg:hover:bg-red-50 lg:hover:text-red-600 dark:bg-transparent dark:text-slate-100 lg:dark:hover:bg-red-900/20 lg:dark:hover:text-red-400",
     },
     brand: {
-      default: "bg-brand text-brand-foreground hover:bg-brand/90",
+      default: "bg-brand text-brand-foreground lg:hover:bg-brand/90",
       secondary:
-        "bg-brand/10 text-brand hover:bg-brand/20 border border-brand/30 dark:bg-brand/20 dark:text-brand dark:border-brand/50 dark:hover:bg-brand/30",
+        "bg-brand/10 text-brand lg:hover:bg-brand/20 border border-brand/30 dark:bg-brand/20 dark:text-brand dark:border-brand/50 lg:dark:hover:bg-brand/30",
       outline:
-        "border border-slate-300 bg-transparent text-slate-900 hover:border-brand hover:text-brand dark:border-slate-700 dark:text-slate-100 dark:hover:border-brand dark:hover:text-brand",
+        "border border-slate-300 bg-transparent text-slate-900 lg:hover:border-brand lg:hover:text-brand dark:border-slate-700 dark:text-slate-100 lg:dark:hover:border-brand lg:dark:hover:text-brand",
       ghost:
-        "bg-transparent text-slate-900 hover:bg-brand/10 hover:text-brand dark:bg-transparent dark:text-slate-100 dark:hover:bg-brand/20 dark:hover:text-brand",
+        "bg-transparent text-slate-900 lg:hover:bg-brand/10 lg:hover:text-brand dark:bg-transparent dark:text-slate-100 lg:dark:hover:bg-brand/20 lg:dark:hover:text-brand",
     },
     slate: {
-      default: "bg-slate-600 text-white hover:bg-slate-700",
+      default: "bg-slate-600 text-white lg:hover:bg-slate-700",
       secondary:
-        "bg-slate-100 text-slate-900 hover:bg-slate-200 border border-slate-300 dark:bg-slate-800 dark:text-slate-100 dark:hover:bg-slate-700 dark:border-slate-700",
+        "bg-white text-slate-900 lg:hover:bg-slate-200 border border-slate-300 dark:bg-slate-800 dark:text-slate-100 lg:dark:hover:bg-slate-700 dark:border-slate-700",
       outline:
-        "border border-slate-300 bg-transparent text-slate-900 hover:border-slate-500 hover:text-slate-600 dark:border-slate-700 dark:text-slate-100 dark:hover:border-slate-500 dark:hover:text-slate-400",
+        "border border-slate-300 bg-transparent text-slate-900 lg:hover:border-slate-500 lg:hover:text-slate-600 dark:border-slate-700 dark:text-slate-100 lg:dark:hover:border-slate-500 lg:dark:hover:text-slate-400",
       ghost:
-        "bg-transparent text-slate-900 hover:bg-slate-100 dark:bg-transparent dark:text-slate-100 dark:hover:bg-slate-800",
+        "bg-transparent text-slate-900 lg:hover:bg-slate-100 dark:bg-transparent dark:text-slate-100 lg:dark:hover:bg-slate-800",
     },
     emerald: {
-      default: "bg-emerald-600 text-white hover:bg-emerald-700",
+      default: "bg-emerald-600 text-white lg:hover:bg-emerald-700",
       secondary:
-        "bg-emerald-100 text-emerald-700 hover:bg-emerald-200 border border-emerald-300 dark:bg-emerald-900/30 dark:text-emerald-300 dark:border-emerald-700 dark:hover:bg-emerald-900/50",
+        "bg-emerald-100 text-emerald-700 lg:hover:bg-emerald-200 border border-emerald-300 dark:bg-emerald-900/30 dark:text-emerald-300 dark:border-emerald-700 lg:dark:hover:bg-emerald-900/50",
       outline:
-        "border border-slate-300 bg-transparent text-slate-900 hover:border-emerald-500 hover:text-emerald-600 dark:border-slate-700 dark:text-slate-100 dark:hover:border-emerald-500 dark:hover:text-emerald-400",
+        "border border-slate-300 bg-transparent text-slate-900 lg:hover:border-emerald-500 lg:hover:text-emerald-600 dark:border-slate-700 dark:text-slate-100 lg:dark:hover:border-emerald-500 lg:dark:hover:text-emerald-400",
       ghost:
-        "bg-transparent text-slate-900 hover:bg-emerald-50 hover:text-emerald-600 dark:bg-transparent dark:text-slate-100 dark:hover:bg-emerald-900/20 dark:hover:text-emerald-400",
+        "bg-transparent text-slate-900 lg:hover:bg-emerald-50 lg:hover:text-emerald-600 dark:bg-transparent dark:text-slate-100 lg:dark:hover:bg-emerald-900/20 lg:dark:hover:text-emerald-400",
     },
   };
 

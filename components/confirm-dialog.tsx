@@ -8,12 +8,13 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
+import type { ReactNode } from "react";
 
 interface ConfirmDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   title: string;
-  description: string;
+  description: string | ReactNode;
   confirmText?: string;
   cancelText?: string;
   variant?: "default" | "destructive";
@@ -41,7 +42,17 @@ export function ConfirmDialog({
       <DialogContent className="max-w-md">
         <DialogHeader>
           <DialogTitle>{title}</DialogTitle>
-          <DialogDescription>{description}</DialogDescription>
+          <DialogDescription>
+            {typeof description === "string" ? (
+              <span
+                dangerouslySetInnerHTML={{
+                  __html: description,
+                }}
+              />
+            ) : (
+              description
+            )}
+          </DialogDescription>
         </DialogHeader>
         <div className="flex justify-end gap-2 pt-4">
           <Button

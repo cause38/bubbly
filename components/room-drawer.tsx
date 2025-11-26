@@ -1,8 +1,8 @@
 "use client";
 
+import { ConfirmDialog } from "@/components/confirm-dialog";
 import { SessionStatusBadge } from "@/components/session-status-badge";
 import { Button } from "@/components/ui/button";
-import { ConfirmDialog } from "@/components/confirm-dialog";
 import { endSession, reactivateSession } from "@/lib/questions";
 import { useSessionStore } from "@/lib/stores/session-store";
 import type { SessionState } from "@/lib/types";
@@ -82,7 +82,7 @@ export function RoomDrawer({
       )}
       <aside
         className={cn(
-          "max-h-[calc(100vh-61px)] min-w-[20rem] overflow-y-auto fixed left-0 top-[61px] bottom-0 z-50 w-80 max-w-[80%] border-r border-slate-200 bg-white px-4 py-6 shadow-xl backdrop-blur-xl transition-transform duration-300 dark:border-white/10 dark:bg-slate-950/95",
+          "max-h-[calc(100vh-61px)] min-w-[20rem] overflow-y-auto fixed left-0 top-[61px] bottom-0 z-50 w-80 max-w-[80%] border-r border-slate-200 bg-white px-4 py-4 shadow-xl backdrop-blur-xl transition-transform duration-300 dark:border-white/10 dark:bg-slate-950/95",
           isOpen ? "translate-x-0" : "-translate-x-full"
         )}
       >
@@ -194,7 +194,7 @@ export function RoomDrawer({
                 </Button>
               ) : null}
               <Button
-                variant="outline"
+                variant="secondary"
                 theme="red"
                 onClick={onDeleteClick}
                 disabled={
@@ -213,7 +213,7 @@ export function RoomDrawer({
         open={isEndConfirmOpen}
         onOpenChange={setIsEndConfirmOpen}
         title="방 종료 확인"
-        description="방을 종료할 경우 질문과 공감을 남길 수 없습니다. 종료일 이전까지는 방을 재개할 수 있습니다. 정말로 방을 종료하시겠습니까?"
+        description="방을 종료할 경우 질문과 공감을 남길 수 없습니다.<br/>종료일 이전까지는 방을 재개할 수 있습니다.<br/>방을 종료하시겠습니까?"
         confirmText="종료"
         cancelText="취소"
         variant="destructive"

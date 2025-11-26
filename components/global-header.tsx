@@ -81,8 +81,7 @@ export function GlobalHeader() {
       <div className="flex items-center gap-3">
         {inRoom && (
           <Button
-            aria-label="방 메뉴 토글"
-            variant="outline"
+            variant="secondary"
             theme="brand"
             className="h-8 w-8 p-0"
             onClick={() => setRoomDrawerOpen(!isRoomDrawerOpen)}
@@ -108,7 +107,7 @@ export function GlobalHeader() {
           <Button
             size="sm"
             variant="ghost"
-            theme="slate"
+            theme="brand"
             className="h-9 w-9 p-0"
             onClick={() => setTheme(theme === "dark" ? "light" : "dark")}
           >
@@ -124,8 +123,8 @@ export function GlobalHeader() {
           <PopoverTrigger asChild>
             <Button
               size="sm"
-              variant="ghost"
-              theme="brand"
+              variant="secondary"
+              theme="slate"
               className="h-9 w-9 p-0"
             >
               <User className="h-4 w-4 shrink-0" />

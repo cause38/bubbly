@@ -36,7 +36,7 @@ export function QuestionCard({
     addSuffix: true,
     locale: ko,
   });
-  const canReact = Boolean(onReact);
+  const canReact = question.status === "approved" && !!onReact;
 
   const recentComments = useMemo(() => {
     if (!question.comments?.length) return [];
@@ -67,34 +67,32 @@ export function QuestionCard({
             {question.content}
           </p>
         </div>
-        <button
-          type="button"
-          className={cn(
-            "flex items-center gap-1 rounded-full border px-2 py-1 transition hover:scale-105",
-            !canReact && "cursor-not-allowed opacity-50",
-            userReaction === "like"
-              ? "border-brand bg-brand/10 text-brand"
-              : "border-slate-300 bg-slate-50 hover:border-brand hover:text-brand dark:border-white/10 dark:bg-white/10"
-          )}
-          onClick={() => (canReact ? onReact?.() : undefined)}
-          disabled={!canReact}
-        >
-          <ThumbsUp className="h-4 w-4" />
-          <span className="text-[10px] font-semibold text-slate-700 dark:text-slate-200">
-            {question.like}
-          </span>
-        </button>
+        {question.status !== "pending" && (
+          <button
+            type="button"
+            className={cn(
+              "flex items-center gap-1 rounded-full border px-2 py-1 transition hover:scale-105 disabled:cursor-not-allowed disabled:opacity-50",
+              userReaction === "like"
+                ? "border-brand bg-brand/10 text-brand"
+                : "border-slate-300 bg-slate-50 hover:border-brand hover:text-brand dark:border-white/10 dark:bg-white/10"
+            )}
+            onClick={() => canReact && onReact()}
+            disabled={!canReact}
+          >
+            <ThumbsUp className="h-4 w-4" />
+            <span className="text-[10px] font-semibold text-slate-700 dark:text-slate-200">
+              {question.like}
+            </span>
+          </button>
+        )}
       </div>
 
       {mode === "host" ? (
         <div className="flex flex-wrap items-center gap-2">
           <Button
             size="sm"
-            variant="outline"
-            theme="emerald"
             onClick={() => onStatusChange?.("approved")}
             disabled={question.status === "approved"}
-            className="hover:!border-emerald-500"
           >
             승인
           </Button>
@@ -104,14 +102,13 @@ export function QuestionCard({
             theme="amber"
             onClick={() => onStatusChange?.("archived")}
             disabled={question.status === "archived"}
-            className="hover:!border-amber-500"
           >
             반려
           </Button>
           {question.status === "approved" ? (
             <Button
               size="sm"
-              variant={question.highlighted ? "default" : "outline"}
+              variant={question.highlighted ? "secondary" : "outline"}
               theme="brand"
               onClick={onHighlight}
             >

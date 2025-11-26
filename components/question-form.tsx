@@ -113,7 +113,7 @@ export function QuestionForm({ sessionCode, disabled }: QuestionFormProps) {
         e.preventDefault();
         handleSubmit();
       }}
-      className="group space-y-4 rounded-2xl border border-slate-200 bg-white p-5 shadow-lg shadow-brand/10 dark:border-slate-800 dark:bg-slate-950/70 focus-within:ring-1 focus-within:ring-brand"
+      className="group space-y-4 rounded-2xl border border-slate-200 bg-white p-5 shadow-lg shadow-brand/10 dark:shadow-slate-800/10 dark:border-slate-800 dark:bg-slate-950/70 focus-within:ring-1 focus-within:ring-brand"
     >
       <div className="relative">
         <Textarea

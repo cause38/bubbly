@@ -198,7 +198,7 @@ export function useQuestions({ sessionCode, filter }: UseQuestionsOptions) {
     questions: filteredQuestions,
     isFetching,
     reaction: (questionId: string, delta: 1 | -1 = 1) =>
-      reactionMutation.mutate({ questionId, delta }),
+      reactionMutation.mutateAsync({ questionId, delta }),
     changeStatus: (questionId: string, status: QuestionStatus) =>
       changeStatusMutation.mutate({ questionId, status }),
     remove: (questionId: string) => deleteMutation.mutate(questionId),

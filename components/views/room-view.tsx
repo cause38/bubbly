@@ -7,6 +7,7 @@ import { QuestionForm } from "@/components/question-form";
 import { RoomDrawer } from "@/components/room-drawer";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { RoomViewSkeleton } from "@/components/views/room-view-skeleton";
 import { useQuestions } from "@/hooks/useQuestions";
 import { useSessionState } from "@/hooks/useSessionState";
 import { deleteSession } from "@/lib/questions";
@@ -53,7 +54,8 @@ export function RoomView({ sessionCode }: RoomViewProps) {
     isRoomDrawerOpen: state.isRoomDrawerOpen,
     setRoomDrawerOpen: state.setRoomDrawerOpen,
   }));
-  console.log("user", user);
+
+  const [isStoreReady, setIsStoreReady] = useState(false);
   const [shareCopied, setShareCopied] = useState(false);
   const [reactionMap, setReactionMap] = useState<Record<string, "like">>({});
   const [hostTab, setHostTab] = useState<
@@ -67,6 +69,10 @@ export function RoomView({ sessionCode }: RoomViewProps) {
   const [isDeleteQuestionConfirmOpen, setIsDeleteQuestionConfirmOpen] =
     useState(false);
   const [questionToDelete, setQuestionToDelete] = useState<string | null>(null);
+
+  useEffect(() => {
+    setIsStoreReady(true);
+  }, []);
 
   useEffect(() => {
     setSessionCode(sessionCode);
@@ -96,7 +102,10 @@ export function RoomView({ sessionCode }: RoomViewProps) {
 
   useEffect(() => {
     const checkScreenSize = () => {
-      const isLargeScreen = window.innerWidth >= 1024;
+      const isLargeScreen = window.innerWidth >= 1366;
+
+      console.log("isLargeScreen", isLargeScreen);
+      console.log("isRoomDrawerOpen", isRoomDrawerOpen);
 
       if (isLargeScreen && !isRoomDrawerOpen) {
         setRoomDrawerOpen(true);
@@ -217,20 +226,31 @@ export function RoomView({ sessionCode }: RoomViewProps) {
   };
 
   const handleReaction = (questionId: string) => {
-    const previous = reactionMap[questionId];
-    if (previous === "like") {
-      // 좋아요 취소
-      reaction(questionId, -1);
+    if (!isQuestionSubmissionAllowed) {
+      toast.error("종료된 방은 좋아요를 누를 수 없습니다.");
+      return;
+    }
+    const wasLiked = reactionMap[questionId] === "like";
+    const previousState = reactionMap;
+    let nextState: Record<string, "like">;
+    let delta: 1 | -1;
+
+    if (wasLiked) {
       const { [questionId]: _removed, ...rest } = reactionMap;
-      persistReactions(rest);
+      nextState = rest;
+      delta = -1;
     } else {
-      // 좋아요 추가
-      reaction(questionId, 1);
-      persistReactions({
+      nextState = {
         ...reactionMap,
         [questionId]: "like",
-      });
+      };
+      delta = 1;
     }
+
+    persistReactions(nextState);
+    reaction(questionId, delta).catch(() => {
+      persistReactions(previousState);
+    });
   };
 
   const handleDeleteQuestion = (questionId: string) => {
@@ -245,6 +265,10 @@ export function RoomView({ sessionCode }: RoomViewProps) {
       setQuestionToDelete(null);
     }
   };
+
+  if (!isStoreReady) {
+    return <RoomViewSkeleton />;
+  }
 
   const shareUrl =
     typeof window !== "undefined"
@@ -272,7 +296,7 @@ export function RoomView({ sessionCode }: RoomViewProps) {
   }
 
   return (
-    <div className="relative mx-auto flex w-full min-h-full max-w-3xl flex-col gap-6 px-4">
+    <div className="relative mx-auto flex w-full min-h-full max-w-2xl flex-col gap-6 px-4">
       {isQuestionSubmissionAllowed && session.isActive && (
         <QuestionForm sessionCode={sessionCode} />
       )}
@@ -573,7 +597,7 @@ export function RoomView({ sessionCode }: RoomViewProps) {
             open={isDeleteConfirmOpen}
             onOpenChange={setIsDeleteConfirmOpen}
             title="방 삭제 확인"
-            description="방을 삭제하면 모든 질문이 영구적으로 삭제됩니다. 이 작업은 되돌릴 수 없습니다. 정말로 이 방을 삭제하시겠습니까?"
+            description="방을 삭제하면 모든 질문이 영구적으로 삭제됩니다.<br/>정말로 이 방을 삭제하시겠습니까?"
             confirmText="삭제"
             cancelText="취소"
             variant="destructive"
@@ -589,7 +613,7 @@ export function RoomView({ sessionCode }: RoomViewProps) {
               }
             }}
             title="질문 삭제 확인"
-            description="이 질문을 삭제하면 다시 되돌릴 수 없습니다. 정말로 이 질문을 삭제하시겠습니까?"
+            description="이 질문을 삭제하면 다시 되돌릴 수 없습니다.<br/>정말로 이 질문을 삭제하시겠습니까?"
             confirmText="삭제"
             cancelText="취소"
             variant="destructive"
