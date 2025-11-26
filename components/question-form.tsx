@@ -112,7 +112,7 @@ export function QuestionForm({ sessionCode, disabled }: QuestionFormProps) {
   return (
     <form
       onSubmit={handleSubmit}
-      className="group space-y-4 rounded-2xl border border-slate-800 bg-slate-950/70 p-5 shadow-xl"
+      className="group space-y-4 rounded-2xl border border-slate-200 bg-white p-5 shadow-xl dark:border-slate-800 dark:bg-slate-950/70"
     >
       <div className="relative">
         <Textarea
@@ -123,11 +123,19 @@ export function QuestionForm({ sessionCode, disabled }: QuestionFormProps) {
           maxLength={MAX_LENGTH}
           className="min-h-[24px] h-[24px] focus:min-h-[120px] transition-[min-height] text-base pr-12 pb-6"
         />
-        <div className="absolute bottom-0 right-0 text-xs text-slate-400 pointer-events-none">
-          <span className={content.length >= MAX_LENGTH ? "text-red-400" : ""}>
+        <div className="absolute bottom-0 right-0 text-xs text-slate-600 dark:text-slate-400 pointer-events-none">
+          <span
+            className={
+              content.length >= MAX_LENGTH
+                ? "text-red-500 dark:text-red-400"
+                : ""
+            }
+          >
             {content.length}
           </span>
-          <span className="text-slate-500">/{MAX_LENGTH}</span>
+          <span className="text-slate-500 dark:text-slate-500">
+            /{MAX_LENGTH}
+          </span>
         </div>
       </div>
       <div className="justify-end gap-2 hidden group-focus-within:flex">

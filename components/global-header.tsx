@@ -1,17 +1,7 @@
 "use client";
 
-import {
-  DateRangeInputs,
-  SessionTitleInput,
-} from "@/components/session-form-inputs";
+import { CreateSessionModal } from "@/components/create-session-modal";
 import { Button } from "@/components/ui/button";
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog";
 import {
   Popover,
   PopoverContent,
@@ -19,20 +9,16 @@ import {
 } from "@/components/ui/popover";
 import { Separator } from "@/components/ui/separator";
 import { signInWithGoogle, signOutUser } from "@/lib/firebase";
-import { createSession } from "@/lib/questions";
 import { useSessionStore } from "@/lib/stores/session-store";
-import type { SessionState } from "@/lib/types";
-import { useMutation } from "@tanstack/react-query";
 import { LogIn, LogOut, Menu, Moon, PlusCircle, Sun, User } from "lucide-react";
 import { useTheme } from "next-themes";
 import Link from "next/link";
-import { usePathname, useRouter } from "next/navigation";
+import { usePathname } from "next/navigation";
 import { useEffect, useState } from "react";
 import { toast } from "sonner";
 
 export function GlobalHeader() {
   const pathname = usePathname();
-  const router = useRouter();
   const { theme, setTheme } = useTheme();
   const { user, sessionTitle, isRoomDrawerOpen, setRoomDrawerOpen } =
     useSessionStore((state) => ({
@@ -45,9 +31,6 @@ export function GlobalHeader() {
   const [loading, setLoading] = useState(false);
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
   const [isPopoverOpen, setIsPopoverOpen] = useState(false);
-  const [title, setTitle] = useState("");
-  const [startDate, setStartDate] = useState("");
-  const [endDate, setEndDate] = useState("");
   const [mounted, setMounted] = useState(false);
 
   // 테마가 마운트되었는지 확인 (hydration 이슈 방지)
@@ -83,63 +66,6 @@ export function GlobalHeader() {
     }
   };
 
-  const createSessionMutation = useMutation<SessionState>({
-    mutationFn: async () => {
-      if (!user) {
-        throw new Error("로그인이 필요합니다.");
-      }
-      if (!title.trim()) {
-        throw new Error("세션 제목을 입력해주세요.");
-      }
-      if (!startDate || !endDate) {
-        throw new Error("시작 날짜와 종료 날짜는 필수입니다.");
-      }
-      const start = new Date(startDate).setHours(0, 0, 0, 0);
-      const end = new Date(endDate).setHours(23, 59, 59, 999);
-      if (start > end) {
-        throw new Error("시작 날짜가 종료 날짜보다 늦을 수 없습니다.");
-      }
-      return createSession(
-        {
-          uid: user.uid,
-          displayName: user.displayName,
-          email: user.email,
-        },
-        title.trim(),
-        undefined,
-        start,
-        end
-      );
-    },
-    onSuccess: (session: SessionState) => {
-      toast.success("새로운 방이 생성되었습니다!");
-      setTitle("");
-      setStartDate("");
-      setEndDate("");
-      setIsCreateModalOpen(false);
-      router.push(`/room/${session.code}`);
-    },
-    onError: (error: unknown) => {
-      if (error instanceof Error) {
-        toast.error(error.message);
-      } else {
-        toast.error("방 생성에 실패했습니다.");
-      }
-    },
-  });
-
-  const handleCreateSession = () => {
-    if (!user) {
-      toast.error("먼저 진행자 계정으로 로그인해주세요.");
-      return;
-    }
-    if (!title.trim()) {
-      toast.error("세션 제목을 입력해주세요.");
-      return;
-    }
-    createSessionMutation.mutate();
-  };
-
   const handleOpenCreateModal = () => {
     if (!user) {
       toast.error("먼저 로그인해주세요.");
@@ -151,23 +77,26 @@ export function GlobalHeader() {
   };
 
   return (
-    <header className="sticky top-0 z-50 flex items-center justify-between border-b border-white/10 bg-black/40 px-4 py-3 backdrop-blur-xl">
+    <header className="sticky top-0 z-50 flex items-center justify-between border-b border-slate-200 bg-indigo-100 px-4 py-3 backdrop-blur-xl dark:border-white/10 dark:bg-black/40">
       <div className="flex items-center gap-2">
         {inRoom && (
           <button
             type="button"
             aria-label="방 메뉴 토글"
-            className="flex h-8 w-8 items-center justify-center rounded-md border border-white/10 bg-black/40 text-slate-200 hover:border-white/40 hover:text-white"
+            className="flex h-8 w-8 items-center justify-center rounded-md border border-slate-300 bg-white text-slate-700 hover:border-slate-400 hover:text-slate-900 dark:border-white/10 dark:bg-black/40 dark:text-slate-200 dark:hover:border-white/40 dark:hover:text-white"
             onClick={() => setRoomDrawerOpen(!isRoomDrawerOpen)}
           >
             <Menu className="h-4 w-4" />
           </button>
         )}
-        <Link href="/" className="text-lg font-bold tracking-tight text-white">
+        <Link
+          href="/"
+          className="text-lg font-bold tracking-tight text-slate-900 dark:text-white"
+        >
           Bubbly
         </Link>
         {inRoom && sessionTitle ? (
-          <span className="ml-2 max-w-[160px] truncate text-sm text-slate-200/80 sm:max-w-xs">
+          <span className="ml-2 max-w-[160px] truncate text-sm text-slate-600 dark:text-slate-200/80 sm:max-w-xs">
             {sessionTitle}
           </span>
         ) : null}
@@ -192,7 +121,7 @@ export function GlobalHeader() {
             <Button
               size="sm"
               variant="ghost"
-              className="h-9 w-9 rounded-full p-0 text-slate-200 hover:text-white"
+              className="h-9 w-9 rounded-full p-0 text-slate-700 hover:text-slate-900 dark:text-slate-200 dark:hover:text-white"
             >
               <User className="h-4 w-4 shrink-0" />
               <span className="sr-only">사용자 메뉴</span>
@@ -201,7 +130,7 @@ export function GlobalHeader() {
           <PopoverContent className="w-48 p-1" align="end">
             {user ? (
               <div className="space-y-1">
-                <div className="px-3 py-2 text-xs text-slate-400">
+                <div className="px-3 py-2 text-xs text-slate-600 dark:text-slate-400">
                   {user.displayName ?? user.email ?? "로그인됨"}
                 </div>
                 <Separator />
@@ -209,7 +138,7 @@ export function GlobalHeader() {
                   onClick={() => {
                     handleOpenCreateModal();
                   }}
-                  className="flex w-full items-center gap-2 rounded-md px-3 py-2 text-sm text-slate-200 hover:bg-slate-800"
+                  className="flex w-full items-center gap-2 rounded-md px-3 py-2 text-sm text-slate-900 hover:bg-slate-100 dark:text-slate-200 dark:hover:bg-slate-800"
                 >
                   <PlusCircle className="h-4 w-4" />방 만들기
                 </button>
@@ -218,7 +147,7 @@ export function GlobalHeader() {
                     handleSignOut();
                   }}
                   disabled={loading}
-                  className="flex w-full items-center gap-2 rounded-md px-3 py-2 text-sm text-slate-200 hover:bg-slate-800 disabled:opacity-50"
+                  className="flex w-full items-center gap-2 rounded-md px-3 py-2 text-sm text-slate-900 hover:bg-slate-100 disabled:opacity-50 dark:text-slate-200 dark:hover:bg-slate-800"
                 >
                   <LogOut className="h-4 w-4" />
                   로그아웃
@@ -231,7 +160,7 @@ export function GlobalHeader() {
                     handleSignIn();
                   }}
                   disabled={loading}
-                  className="flex w-full items-center gap-2 rounded-md px-3 py-2 text-sm text-slate-200 hover:bg-slate-800 disabled:opacity-50"
+                  className="flex w-full items-center gap-2 rounded-md px-3 py-2 text-sm text-slate-900 hover:bg-slate-100 disabled:opacity-50 dark:text-slate-200 dark:hover:bg-slate-800"
                 >
                   <LogIn className="h-4 w-4" />
                   로그인
@@ -242,60 +171,11 @@ export function GlobalHeader() {
         </Popover>
       </div>
 
-      <Dialog open={isCreateModalOpen} onOpenChange={setIsCreateModalOpen}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>새 방 만들기</DialogTitle>
-            <DialogDescription>
-              방을 생성한 진행자는 자동으로 방장으로 지정되며, 이후 해당
-              계정으로만 질문 승인 및 반려가 가능합니다.
-            </DialogDescription>
-          </DialogHeader>
-          <div className="space-y-4 py-4">
-            <DateRangeInputs
-              startDate={startDate}
-              endDate={endDate}
-              onStartDateChange={setStartDate}
-              onEndDateChange={setEndDate}
-              defaultStartDate=""
-              required
-            />
-            <SessionTitleInput
-              value={title}
-              onChange={setTitle}
-              onKeyDown={(e) => {
-                if (e.key === "Enter" && title.trim()) {
-                  handleCreateSession();
-                }
-              }}
-            />
-          </div>
-          <div className="flex justify-end gap-2">
-            <Button
-              variant="ghost"
-              onClick={() => {
-                setIsCreateModalOpen(false);
-                setTitle("");
-                setStartDate("");
-                setEndDate("");
-              }}
-            >
-              취소
-            </Button>
-            <Button
-              onClick={handleCreateSession}
-              disabled={
-                !title.trim() ||
-                !startDate ||
-                !endDate ||
-                createSessionMutation.isPending
-              }
-            >
-              {createSessionMutation.isPending ? "방 생성 중..." : "방 만들기"}
-            </Button>
-          </div>
-        </DialogContent>
-      </Dialog>
+      <CreateSessionModal
+        open={isCreateModalOpen}
+        onOpenChange={setIsCreateModalOpen}
+        user={user}
+      />
     </header>
   );
 }

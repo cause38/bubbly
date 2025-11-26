@@ -29,12 +29,12 @@ export function HomeView() {
   return (
     <div className="mx-auto flex h-full overflow-y-auto items-center justify-center w-full max-w-lg flex-col gap-10 px-4">
       <section className="grid gap-6 w-full">
-        <div className="space-y-4 rounded-2xl border border-slate-800 bg-slate-950/60 p-6">
-          <div className="flex items-center gap-2 text-slate-200">
+        <div className="space-y-4 rounded-2xl border border-slate-200 bg-white p-6 dark:border-slate-800 dark:bg-slate-950/60">
+          <div className="flex items-center gap-2 text-slate-900 dark:text-slate-200">
             <KeyRound className="h-5 w-5 text-brand" />
             <h2 className="text-xl font-semibold">방 코드로 참여하기</h2>
           </div>
-          <p className="text-sm text-slate-400">
+          <p className="text-sm text-slate-600 dark:text-slate-400">
             공유받은 방 주소 또는 방 코드를 입력하면 바로 참여할 수 있습니다.
           </p>
           <form className="space-y-3" onSubmit={handleJoin}>
@@ -57,7 +57,7 @@ export function HomeView() {
 
       {user ? (
         <section className="space-y-4 w-full">
-          <h2 className="text-xl font-semibold text-white pl-2">
+          <h2 className="text-xl font-semibold text-slate-900 dark:text-white pl-2">
             내가 만든 방
           </h2>
           <Suspense fallback={<HostSessionsSkeleton />}>
@@ -75,7 +75,7 @@ function HostSessionsList({ hostUid }: { hostUid: string }) {
 
   if (!sessions.length && !isFetching) {
     return (
-      <div className="rounded-xl border border-slate-800 bg-slate-950/60 p-6 text-sm text-slate-300">
+      <div className="rounded-xl border border-slate-200 bg-white p-6 text-sm text-slate-700 dark:border-slate-800 dark:bg-slate-950/60 dark:text-slate-300">
         아직 만든 방이 없습니다. 새로운 Q&A 방을 만들어보세요!
       </div>
     );
@@ -89,16 +89,16 @@ function HostSessionsList({ hostUid }: { hostUid: string }) {
         sessions.map((session) => (
           <div
             key={session.code}
-            className="flex flex-col justify-between gap-3 rounded-xl border border-slate-800 bg-slate-950/60 p-4 sm:flex-row sm:items-center"
+            className="flex flex-col justify-between gap-3 rounded-xl border border-slate-200 bg-white p-4 sm:flex-row sm:items-center dark:border-slate-800 dark:bg-slate-950/60"
           >
             <div>
-              <div className="text-lg font-semibold text-white">
+              <div className="text-lg font-semibold text-slate-900 dark:text-white">
                 {session.title}
               </div>
-              <div className="mt-1 text-xs text-slate-500">
+              <div className="mt-1 text-xs text-slate-600 dark:text-slate-500">
                 코드: {session.code}
               </div>
-              <div className="flex items-center gap-2 text-sm text-slate-400">
+              <div className="flex items-center gap-2 text-sm text-slate-600 dark:text-slate-400">
                 <CalendarClock className="h-4 w-4" />
                 <span>
                   {new Date(session.createdAt).toLocaleString("ko-KR", {
@@ -136,7 +136,7 @@ function HostSessionsSkeleton() {
       {Array.from({ length: 2 }).map((_, index) => (
         <div
           key={index}
-          className="h-20 animate-pulse rounded-xl border border-slate-800 bg-slate-900/40"
+          className="h-20 animate-pulse rounded-xl border border-slate-200 bg-slate-100 dark:border-slate-800 dark:bg-slate-900/40"
         />
       ))}
     </div>

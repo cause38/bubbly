@@ -18,7 +18,7 @@ export function SessionTitleInput({
 }: SessionTitleInputProps) {
   return (
     <div className="space-y-2">
-      <label className="text-sm font-medium text-slate-200">방 이름</label>
+      <label className="text-sm font-medium text-slate-900 dark:text-slate-200">방 이름</label>
       <Input
         value={value}
         onChange={(e) => onChange(e.target.value)}
@@ -108,18 +108,18 @@ export function DateRangeInputs({
     return (
       <div className="grid grid-cols-2 gap-4">
         <div className="space-y-2">
-          <label className="text-sm font-medium text-slate-200">
-            시작 날짜 {required && <span className="text-red-400">*</span>}
+          <label className="text-sm font-medium text-slate-900 dark:text-slate-200">
+            시작 날짜 {required && <span className="text-red-500 dark:text-red-400">*</span>}
           </label>
-          <div className="mt-1 text-sm text-white">
+          <div className="mt-1 text-sm text-slate-900 dark:text-white">
             {startDate ? formatDate(startDate) : "-"}
           </div>
         </div>
         <div className="space-y-2">
-          <label className="text-sm font-medium text-slate-200">
-            종료 날짜 {required && <span className="text-red-400">*</span>}
+          <label className="text-sm font-medium text-slate-900 dark:text-slate-200">
+            종료 날짜 {required && <span className="text-red-500 dark:text-red-400">*</span>}
           </label>
-          <div className="mt-1 text-sm text-white">
+          <div className="mt-1 text-sm text-slate-900 dark:text-white">
             {endDate ? formatDate(endDate) : "-"}
           </div>
         </div>
@@ -130,8 +130,8 @@ export function DateRangeInputs({
   return (
     <div className="grid grid-cols-2 gap-4">
       <div className="space-y-2">
-        <label className="text-sm font-medium text-slate-200">
-          시작 날짜 {required && <span className="text-red-400">*</span>}
+        <label className="text-sm font-medium text-slate-900 dark:text-slate-200">
+          시작 날짜 {required && <span className="text-red-500 dark:text-red-400">*</span>}
         </label>
         <Input
           type="date"
@@ -142,8 +142,8 @@ export function DateRangeInputs({
         />
       </div>
       <div className="space-y-2">
-        <label className="text-sm font-medium text-slate-200">
-          종료 날짜 {required && <span className="text-red-400">*</span>}
+        <label className="text-sm font-medium text-slate-900 dark:text-slate-200">
+          종료 날짜 {required && <span className="text-red-500 dark:text-red-400">*</span>}
         </label>
         <Input
           type="date"
