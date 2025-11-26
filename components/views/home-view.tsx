@@ -1,13 +1,13 @@
 "use client";
 
-import { Suspense, useState } from "react";
-import { useRouter } from "next/navigation";
-import { ArrowRight, CalendarClock, KeyRound, Link2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { useSessionStore } from "@/lib/stores/session-store";
-import { toast } from "sonner";
 import { useHostSessions } from "@/hooks/useHostSessions";
+import { useSessionStore } from "@/lib/stores/session-store";
+import { ArrowRight, CalendarClock, KeyRound } from "lucide-react";
+import { useRouter } from "next/navigation";
+import { Suspense, useState } from "react";
+import { toast } from "sonner";
 
 export function HomeView() {
   const router = useRouter();
@@ -27,8 +27,8 @@ export function HomeView() {
   };
 
   return (
-    <div className="mx-auto flex h-full overflow-y-auto items-center justify-center w-full max-w-4xl flex-col gap-10 px-4">
-      <section className="grid gap-6">
+    <div className="mx-auto flex h-full overflow-y-auto items-center justify-center w-full max-w-lg flex-col gap-10 px-4">
+      <section className="grid gap-6 w-full">
         <div className="space-y-4 rounded-2xl border border-slate-800 bg-slate-950/60 p-6">
           <div className="flex items-center gap-2 text-slate-200">
             <KeyRound className="h-5 w-5 text-brand" />
@@ -52,20 +52,14 @@ export function HomeView() {
               참여하기
             </Button>
           </form>
-          <div className="rounded-xl border border-dashed border-slate-800 bg-slate-900/40 p-4 text-xs text-slate-400">
-            <div className="flex items-center gap-2 text-slate-300">
-              <Link2 className="h-4 w-4 text-brand" />방 링크 예시
-            </div>
-            <p className="mt-2 break-all font-mono text-slate-500">
-              https://your-site.com/room/ABC123
-            </p>
-          </div>
         </div>
       </section>
 
       {user ? (
-        <section className="space-y-4">
-          <h2 className="text-xl font-semibold text-white">내가 만든 방</h2>
+        <section className="space-y-4 w-full">
+          <h2 className="text-xl font-semibold text-white pl-2">
+            내가 만든 방
+          </h2>
           <Suspense fallback={<HostSessionsSkeleton />}>
             <HostSessionsList hostUid={user.uid} />
           </Suspense>
@@ -76,6 +70,7 @@ export function HomeView() {
 }
 
 function HostSessionsList({ hostUid }: { hostUid: string }) {
+  const router = useRouter();
   const { sessions, isFetching } = useHostSessions(hostUid);
 
   if (!sessions.length && !isFetching) {
@@ -124,7 +119,7 @@ function HostSessionsList({ hostUid }: { hostUid: string }) {
             </div>
             <Button
               variant="outline"
-              onClick={() => window.open(`/room/${session.code}`, "_blank")}
+              onClick={() => router.push(`/room/${session.code}`)}
             >
               방으로 이동
             </Button>

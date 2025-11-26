@@ -1,10 +1,9 @@
 "use client";
 
-import Link from "next/link";
-import { usePathname, useRouter } from "next/navigation";
-import { LogIn, LogOut, Menu, PlusCircle, User } from "lucide-react";
-import { useState } from "react";
-import { useMutation } from "@tanstack/react-query";
+import {
+  DateRangeInputs,
+  SessionTitleInput,
+} from "@/components/session-form-inputs";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -19,19 +18,22 @@ import {
   PopoverTrigger,
 } from "@/components/ui/popover";
 import { Separator } from "@/components/ui/separator";
-import {
-  SessionTitleInput,
-  DateRangeInputs,
-} from "@/components/session-form-inputs";
 import { signInWithGoogle, signOutUser } from "@/lib/firebase";
 import { createSession } from "@/lib/questions";
 import { useSessionStore } from "@/lib/stores/session-store";
-import { toast } from "sonner";
 import type { SessionState } from "@/lib/types";
+import { useMutation } from "@tanstack/react-query";
+import { LogIn, LogOut, Menu, Moon, PlusCircle, Sun, User } from "lucide-react";
+import { useTheme } from "next-themes";
+import Link from "next/link";
+import { usePathname, useRouter } from "next/navigation";
+import { useEffect, useState } from "react";
+import { toast } from "sonner";
 
 export function GlobalHeader() {
   const pathname = usePathname();
   const router = useRouter();
+  const { theme, setTheme } = useTheme();
   const { user, sessionTitle, isRoomDrawerOpen, setRoomDrawerOpen } =
     useSessionStore((state) => ({
       user: state.user,
@@ -46,6 +48,12 @@ export function GlobalHeader() {
   const [title, setTitle] = useState("");
   const [startDate, setStartDate] = useState("");
   const [endDate, setEndDate] = useState("");
+  const [mounted, setMounted] = useState(false);
+
+  // 테마가 마운트되었는지 확인 (hydration 이슈 방지)
+  useEffect(() => {
+    setMounted(true);
+  }, []);
 
   const handleSignIn = async () => {
     try {
@@ -164,59 +172,75 @@ export function GlobalHeader() {
           </span>
         ) : null}
       </div>
-      <Popover open={isPopoverOpen} onOpenChange={setIsPopoverOpen}>
-        <PopoverTrigger asChild>
-          <Button
-            size="sm"
-            variant="ghost"
-            className="h-9 w-9 rounded-full p-0 text-slate-200 hover:text-white"
+      <div className="flex items-center gap-2">
+        {mounted && (
+          <button
+            type="button"
+            aria-label="테마 전환"
+            className="flex h-9 w-9 items-center justify-center rounded-md border border-slate-200 bg-slate-100 text-slate-700 hover:border-slate-300 hover:text-slate-900 dark:border-white/10 dark:bg-black/40 dark:text-slate-200 dark:hover:border-white/40 dark:hover:text-white"
+            onClick={() => setTheme(theme === "dark" ? "light" : "dark")}
           >
-            <User className="h-4 w-4 shrink-0" />
-            <span className="sr-only">사용자 메뉴</span>
-          </Button>
-        </PopoverTrigger>
-        <PopoverContent className="w-48 p-1" align="end">
-          {user ? (
-            <div className="space-y-1">
-              <div className="px-3 py-2 text-xs text-slate-400">
-                {user.displayName ?? user.email ?? "로그인됨"}
+            {theme === "dark" ? (
+              <Moon className="h-4 w-4" />
+            ) : (
+              <Sun className="h-4 w-4" />
+            )}
+          </button>
+        )}
+        <Popover open={isPopoverOpen} onOpenChange={setIsPopoverOpen}>
+          <PopoverTrigger asChild>
+            <Button
+              size="sm"
+              variant="ghost"
+              className="h-9 w-9 rounded-full p-0 text-slate-200 hover:text-white"
+            >
+              <User className="h-4 w-4 shrink-0" />
+              <span className="sr-only">사용자 메뉴</span>
+            </Button>
+          </PopoverTrigger>
+          <PopoverContent className="w-48 p-1" align="end">
+            {user ? (
+              <div className="space-y-1">
+                <div className="px-3 py-2 text-xs text-slate-400">
+                  {user.displayName ?? user.email ?? "로그인됨"}
+                </div>
+                <Separator />
+                <button
+                  onClick={() => {
+                    handleOpenCreateModal();
+                  }}
+                  className="flex w-full items-center gap-2 rounded-md px-3 py-2 text-sm text-slate-200 hover:bg-slate-800"
+                >
+                  <PlusCircle className="h-4 w-4" />방 만들기
+                </button>
+                <button
+                  onClick={() => {
+                    handleSignOut();
+                  }}
+                  disabled={loading}
+                  className="flex w-full items-center gap-2 rounded-md px-3 py-2 text-sm text-slate-200 hover:bg-slate-800 disabled:opacity-50"
+                >
+                  <LogOut className="h-4 w-4" />
+                  로그아웃
+                </button>
               </div>
-              <Separator />
-              <button
-                onClick={() => {
-                  handleOpenCreateModal();
-                }}
-                className="flex w-full items-center gap-2 rounded-md px-3 py-2 text-sm text-slate-200 hover:bg-slate-800"
-              >
-                <PlusCircle className="h-4 w-4" />방 만들기
-              </button>
-              <button
-                onClick={() => {
-                  handleSignOut();
-                }}
-                disabled={loading}
-                className="flex w-full items-center gap-2 rounded-md px-3 py-2 text-sm text-slate-200 hover:bg-slate-800 disabled:opacity-50"
-              >
-                <LogOut className="h-4 w-4" />
-                로그아웃
-              </button>
-            </div>
-          ) : (
-            <div className="p-1">
-              <button
-                onClick={() => {
-                  handleSignIn();
-                }}
-                disabled={loading}
-                className="flex w-full items-center gap-2 rounded-md px-3 py-2 text-sm text-slate-200 hover:bg-slate-800 disabled:opacity-50"
-              >
-                <LogIn className="h-4 w-4" />
-                로그인
-              </button>
-            </div>
-          )}
-        </PopoverContent>
-      </Popover>
+            ) : (
+              <div className="p-1">
+                <button
+                  onClick={() => {
+                    handleSignIn();
+                  }}
+                  disabled={loading}
+                  className="flex w-full items-center gap-2 rounded-md px-3 py-2 text-sm text-slate-200 hover:bg-slate-800 disabled:opacity-50"
+                >
+                  <LogIn className="h-4 w-4" />
+                  로그인
+                </button>
+              </div>
+            )}
+          </PopoverContent>
+        </Popover>
+      </div>
 
       <Dialog open={isCreateModalOpen} onOpenChange={setIsCreateModalOpen}>
         <DialogContent>

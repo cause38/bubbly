@@ -1,18 +1,13 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
-import { useRouter } from "next/navigation";
-import { useMutation, useQueryClient } from "@tanstack/react-query";
-import { Edit2, PlayCircle, Save, Share2, Trash2, XCircle } from "lucide-react";
+import { ConfirmDialog } from "@/components/confirm-dialog";
 import { QuestionCard } from "@/components/question-card";
 import { QuestionForm } from "@/components/question-form";
 import {
-  SessionTitleInput,
   DateRangeInputs,
+  SessionTitleInput,
 } from "@/components/session-form-inputs";
-import { ConfirmDialog } from "@/components/confirm-dialog";
 import { Button } from "@/components/ui/button";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import {
   Dialog,
   DialogContent,
@@ -20,18 +15,23 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useQuestions } from "@/hooks/useQuestions";
 import { useSessionState } from "@/hooks/useSessionState";
 import {
+  deleteSession,
   endSession,
   reactivateSession,
   updateSession,
-  deleteSession,
 } from "@/lib/questions";
 import { useSessionStore } from "@/lib/stores/session-store";
-import { cn } from "@/lib/utils";
-import { toast } from "sonner";
 import type { Question } from "@/lib/types";
+import { cn } from "@/lib/utils";
+import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { Edit2, PlayCircle, Save, Share2, Trash2, XCircle } from "lucide-react";
+import { useRouter } from "next/navigation";
+import { useEffect, useMemo, useState } from "react";
+import { toast } from "sonner";
 
 interface RoomViewProps {
   sessionCode: string;
@@ -69,7 +69,6 @@ export function RoomView({ sessionCode }: RoomViewProps) {
     setRoomDrawerOpen: state.setRoomDrawerOpen,
   }));
   const [shareCopied, setShareCopied] = useState(false);
-  const [isDetailsOpen, setIsDetailsOpen] = useState(false);
   const [reactionMap, setReactionMap] = useState<Record<string, "like">>({});
   const [hostTab, setHostTab] = useState<
     "pending" | "approved" | "archived" | "all"
@@ -109,6 +108,30 @@ export function RoomView({ sessionCode }: RoomViewProps) {
       }
     }
   }, [sessionCode]);
+
+  // lg 이상 화면에서는 Drawer를 기본적으로 열어둠
+  useEffect(() => {
+    const checkScreenSize = () => {
+      const isLargeScreen = window.innerWidth >= 1024; // lg breakpoint
+
+      if (isLargeScreen && !isRoomDrawerOpen) {
+        setRoomDrawerOpen(true);
+      }
+      console.log("isLargeScreen", isLargeScreen);
+      console.log("isRoomDrawerOpen", isRoomDrawerOpen);
+
+      if (!isLargeScreen && isRoomDrawerOpen) {
+        setRoomDrawerOpen(false);
+      }
+    };
+
+    // 초기 체크
+    checkScreenSize();
+
+    // 리사이즈 이벤트 리스너
+    window.addEventListener("resize", checkScreenSize);
+    return () => window.removeEventListener("resize", checkScreenSize);
+  }, []);
 
   const isHost = Boolean(
     session?.hostUid && user?.uid && session.hostUid === user.uid
@@ -334,7 +357,7 @@ export function RoomView({ sessionCode }: RoomViewProps) {
   }
 
   return (
-    <div className="relative mx-auto flex w-full min-h-full max-w-5xl flex-col gap-6 px-4">
+    <div className="relative mx-auto flex w-full min-h-full max-w-5xl flex-col gap-6 px-4 lg:ml-80">
       {isQuestionSubmissionAllowed && session.isActive && (
         <QuestionForm sessionCode={sessionCode} />
       )}
@@ -606,130 +629,135 @@ export function RoomView({ sessionCode }: RoomViewProps) {
         </section>
       )}
 
-      {isRoomDrawerOpen ? (
-        <>
+      <>
+        {isRoomDrawerOpen && (
           <div
-            className="fixed inset-0 z-40 bg-black/40 transition-opacity animate-in fade-in duration-200"
+            className="fixed inset-0 z-40 bg-black/40 transition-opacity animate-in fade-in duration-200 lg:hidden"
             onClick={() => setRoomDrawerOpen(false)}
           />
-          <aside className="max-h-[calc(100vh-61px)] overflow-y-auto fixed left-0 top-[61px] bottom-0 z-50 w-80 max-w-[80%] border-r border-white/10 bg-slate-950/95 px-4 py-6 shadow-xl backdrop-blur-xl transition-transform animate-in slide-in-from-left duration-300">
-            <div className="flex items-center justify-between">
-              <h2 className="text-sm font-semibold text-slate-100">
-                방 상세 정보
-              </h2>
-              <div className="flex items-center gap-2">
-                {isHost && (
-                  <Button
-                    size="sm"
-                    variant="ghost"
-                    className="text-xs text-slate-400 hover:text-slate-100"
-                    onClick={handleOpenEditModal}
-                  >
-                    <Edit2 className="mr-1 h-3 w-3" />
-                    수정
-                  </Button>
+        )}
+        <aside
+          className={cn(
+            "max-h-[calc(100vh-61px)] overflow-y-auto fixed left-0 top-[61px] bottom-0 z-50 w-80 max-w-[80%] border-r border-white/10 bg-slate-950/95 px-4 py-6 shadow-xl backdrop-blur-xl transition-transform duration-300",
+            isRoomDrawerOpen ? "translate-x-0" : "-translate-x-full"
+          )}
+        >
+          <div className="flex items-center justify-between">
+            <h2 className="text-sm font-semibold text-slate-100">
+              방 상세 정보
+            </h2>
+            <div className="flex items-center gap-2">
+              {isHost && (
+                <Button
+                  size="sm"
+                  variant="ghost"
+                  className="text-xs text-slate-400 hover:text-slate-100"
+                  onClick={handleOpenEditModal}
+                >
+                  <Edit2 className="mr-1 h-3 w-3" />
+                  수정
+                </Button>
+              )}
+            </div>
+          </div>
+          <div className="mt-4 space-y-4 text-sm text-slate-300">
+            <div>
+              <span className="text-xs text-slate-500">방 코드</span>
+              <div className="mt-1 flex items-center justify-between rounded-lg border border-slate-800 bg-slate-900 px-3 py-2">
+                <span className="font-mono text-base text-white">
+                  {sessionCode}
+                </span>
+                <Button variant="outline" size="sm" onClick={copyShareUrl}>
+                  <Share2 className="mr-2 h-4 w-4" />
+                  {shareCopied ? "복사됨!" : "복사"}
+                </Button>
+              </div>
+            </div>
+            <div>
+              <span className="text-xs text-slate-500">방 이름</span>
+              <div className="mt-1 text-sm text-white">{session.title}</div>
+            </div>
+            <div>
+              <span className="text-xs text-slate-500">진행자</span>
+              <div className="mt-1 flex items-center gap-2 text-white">
+                {session.hostDisplayName}
+                {session.isActive ? (
+                  <span className="rounded-full border border-emerald-500 px-2 py-0.5 text-xs text-emerald-300">
+                    진행 중
+                  </span>
+                ) : (
+                  <span className="rounded-full border border-slate-700 px-2 py-0.5 text-xs text-slate-400">
+                    종료됨
+                  </span>
                 )}
               </div>
             </div>
-            <div className="mt-4 space-y-4 text-sm text-slate-300">
-              <div>
-                <span className="text-xs text-slate-500">방 코드</span>
-                <div className="mt-1 flex items-center justify-between rounded-lg border border-slate-800 bg-slate-900 px-3 py-2">
-                  <span className="font-mono text-base text-white">
-                    {sessionCode}
-                  </span>
-                  <Button variant="outline" size="sm" onClick={copyShareUrl}>
-                    <Share2 className="mr-2 h-4 w-4" />
-                    {shareCopied ? "복사됨!" : "복사"}
-                  </Button>
+            <div>
+              <span className="text-xs text-slate-500">질문 등록 기간</span>
+              <div className="mt-1 space-y-1 text-sm text-white">
+                <div>
+                  시작:{" "}
+                  {new Date(session.startDate).toLocaleDateString("ko-KR", {
+                    year: "numeric",
+                    month: "short",
+                    day: "numeric",
+                  })}
+                </div>
+                <div>
+                  종료:{" "}
+                  {new Date(session.endDate).toLocaleDateString("ko-KR", {
+                    year: "numeric",
+                    month: "long",
+                    day: "numeric",
+                  })}
                 </div>
               </div>
-              <div>
-                <span className="text-xs text-slate-500">방 이름</span>
-                <div className="mt-1 text-sm text-white">{session.title}</div>
-              </div>
-              <div>
-                <span className="text-xs text-slate-500">진행자</span>
-                <div className="mt-1 flex items-center gap-2 text-white">
-                  {session.hostDisplayName}
-                  {session.isActive ? (
-                    <span className="rounded-full border border-emerald-500 px-2 py-0.5 text-xs text-emerald-300">
-                      진행 중
-                    </span>
-                  ) : (
-                    <span className="rounded-full border border-slate-700 px-2 py-0.5 text-xs text-slate-400">
-                      종료됨
-                    </span>
-                  )}
-                </div>
-              </div>
-              <div>
-                <span className="text-xs text-slate-500">질문 등록 기간</span>
-                <div className="mt-1 space-y-1 text-sm text-white">
-                  <div>
-                    시작:{" "}
-                    {new Date(session.startDate).toLocaleDateString("ko-KR", {
-                      year: "numeric",
-                      month: "short",
-                      day: "numeric",
-                    })}
-                  </div>
-                  <div>
-                    종료:{" "}
-                    {new Date(session.endDate).toLocaleDateString("ko-KR", {
-                      year: "numeric",
-                      month: "long",
-                      day: "numeric",
-                    })}
-                  </div>
-                </div>
-              </div>
-              <div className="rounded-lg border border-slate-800 bg-slate-900/40 p-3 text-xs text-slate-400">
-                <p> • 진행자에게 승인된 질문만 공개됩니다.</p>
-                <p>• 종료 기한 이후엔 질문을 등록할 수 없습니다.</p>
-                {isHost ? (
-                  <>
-                    <p>• 방 종료는 종료 기한 전에만 가능합니다.</p>
-                    <p>• 종료된 방도 종료 기한 전까지는 재개할 수 있습니다.</p>
-                  </>
-                ) : null}
-              </div>
+            </div>
+            <div className="rounded-lg border border-slate-800 bg-slate-900/40 p-3 text-xs text-slate-400">
+              <p> • 진행자에게 승인된 질문만 공개됩니다.</p>
+              <p>• 종료 기한 이후엔 질문을 등록할 수 없습니다.</p>
               {isHost ? (
-                <div className="space-y-3 border-t border-slate-800 pt-4">
-                  {session.isActive && isBeforeEndDate ? (
-                    <Button
-                      variant="outline"
-                      onClick={() => endSessionMutation.mutate()}
-                      disabled={endSessionMutation.isPending}
-                      className="w-full gap-2 text-red-400 hover:text-red-300 hover:border-red-500"
-                    >
-                      <XCircle className="h-4 w-4" />방 종료
-                    </Button>
-                  ) : null}
-                  {!session.isActive && isBeforeEndDate ? (
-                    <Button
-                      variant="outline"
-                      onClick={() => reactivateSessionMutation.mutate()}
-                      disabled={reactivateSessionMutation.isPending}
-                      className="w-full gap-2 text-emerald-400 hover:text-emerald-300 hover:border-emerald-500"
-                    >
-                      <PlayCircle className="h-4 w-4" />방 재개
-                    </Button>
-                  ) : null}
-                  <Button
-                    variant="outline"
-                    onClick={() => setIsDeleteConfirmOpen(true)}
-                    disabled={deleteSessionMutation.isPending}
-                    className="w-full gap-2 text-red-400 hover:text-red-300 hover:border-red-500"
-                  >
-                    <Trash2 className="h-4 w-4" />방 삭제
-                  </Button>
-                </div>
+                <>
+                  <p>• 방 종료는 종료 기한 전에만 가능합니다.</p>
+                  <p>• 종료된 방도 종료 기한 전까지는 재개할 수 있습니다.</p>
+                </>
               ) : null}
             </div>
-          </aside>
-        </>
-      ) : null}
+            {isHost ? (
+              <div className="space-y-3 border-t border-slate-800 pt-4">
+                {session.isActive && isBeforeEndDate ? (
+                  <Button
+                    variant="outline"
+                    onClick={() => endSessionMutation.mutate()}
+                    disabled={endSessionMutation.isPending}
+                    className="w-full gap-2 text-red-400 hover:text-red-300 hover:border-red-500"
+                  >
+                    <XCircle className="h-4 w-4" />방 종료
+                  </Button>
+                ) : null}
+                {!session.isActive && isBeforeEndDate ? (
+                  <Button
+                    variant="outline"
+                    onClick={() => reactivateSessionMutation.mutate()}
+                    disabled={reactivateSessionMutation.isPending}
+                    className="w-full gap-2 text-emerald-400 hover:text-emerald-300 hover:border-emerald-500"
+                  >
+                    <PlayCircle className="h-4 w-4" />방 재개
+                  </Button>
+                ) : null}
+                <Button
+                  variant="outline"
+                  onClick={() => setIsDeleteConfirmOpen(true)}
+                  disabled={deleteSessionMutation.isPending}
+                  className="w-full gap-2 text-red-400 hover:text-red-300 hover:border-red-500"
+                >
+                  <Trash2 className="h-4 w-4" />방 삭제
+                </Button>
+              </div>
+            ) : null}
+          </div>
+        </aside>
+      </>
 
       {isHost && (
         <Dialog open={isEditModalOpen} onOpenChange={setIsEditModalOpen}>

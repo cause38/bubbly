@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import { ThemeProvider } from "next-themes";
 import { Toaster } from "sonner";
 import { observeAuth } from "@/lib/firebase";
 import { useSessionStore } from "@/lib/stores/session-store";
@@ -27,10 +28,12 @@ export function Providers({ children }: { children: React.ReactNode }) {
   }, [setUser]);
 
   return (
-    <QueryClientProvider client={queryClient}>
-      {children}
-      <Toaster richColors position="top-center" />
-    </QueryClientProvider>
+    <ThemeProvider attribute="class" defaultTheme="dark" enableSystem={false}>
+      <QueryClientProvider client={queryClient}>
+        {children}
+        <Toaster richColors position="top-center" />
+      </QueryClientProvider>
+    </ThemeProvider>
   );
 }
 
