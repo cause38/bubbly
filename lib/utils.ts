@@ -109,3 +109,69 @@ export function addVisitedSession(session: {
   }
 }
 
+// iOS 포함 모든 플랫폼에서 작동하는 복사 함수
+export async function copyToClipboard(text: string): Promise<boolean> {
+  if (typeof window === "undefined") return false;
+
+  const isIOS = /ipad|iphone|ipod/i.test(navigator.userAgent);
+
+  // iOS에서는 fallback을 바로 사용 (더 안정적)
+  if (isIOS || !navigator.clipboard) {
+    return fallbackCopyToClipboard(text);
+  }
+
+  try {
+    // Modern clipboard API 시도
+    if (navigator.clipboard && navigator.clipboard.writeText) {
+      await navigator.clipboard.writeText(text);
+      return true;
+    }
+  } catch (error) {
+    // Clipboard API 실패 시 fallback 사용
+    console.warn("Clipboard API failed, trying fallback:", error);
+    return fallbackCopyToClipboard(text);
+  }
+
+  return false;
+}
+
+// Fallback 복사 함수 (iOS 호환)
+function fallbackCopyToClipboard(text: string): boolean {
+  try {
+    const textarea = document.createElement("textarea");
+    textarea.value = text;
+    textarea.contentEditable = "true";
+    textarea.readOnly = true;
+    textarea.style.position = "fixed";
+    textarea.style.left = "-999999px";
+    textarea.style.top = "0";
+    textarea.style.opacity = "0";
+    document.body.appendChild(textarea);
+
+    // iOS에서는 focus와 select를 먼저 호출
+    if (/ipad|iphone|ipod/i.test(navigator.userAgent)) {
+      textarea.contentEditable = "true";
+      textarea.readOnly = false;
+      const range = document.createRange();
+      range.selectNodeContents(textarea);
+      const selection = window.getSelection();
+      if (selection) {
+        selection.removeAllRanges();
+        selection.addRange(range);
+      }
+      textarea.setSelectionRange(0, 999999);
+      textarea.contentEditable = "false";
+    } else {
+      textarea.focus();
+      textarea.select();
+    }
+
+    const successful = document.execCommand("copy");
+    document.body.removeChild(textarea);
+    return successful;
+  } catch (error) {
+    console.error("Fallback copy failed:", error);
+    return false;
+  }
+}
+

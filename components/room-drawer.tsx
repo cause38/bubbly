@@ -8,7 +8,7 @@ import { useSessionStore } from "@/lib/stores/session-store";
 import type { SessionState } from "@/lib/types";
 import { cn } from "@/lib/utils";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
-import { Edit2, PlayCircle, Share2, Trash2, XCircle } from "lucide-react";
+import { Copy, Edit2, PlayCircle, Share2, Trash2, XCircle } from "lucide-react";
 import { useState } from "react";
 import { toast } from "sonner";
 
@@ -112,8 +112,8 @@ export function RoomDrawer({
               방 코드
             </span>
             <div className="mt-1 flex items-center justify-between rounded-lg border border-slate-200 bg-slate-50 px-3 py-2 dark:border-slate-800 dark:bg-slate-900">
-              <span
-                className="font-mono text-base text-slate-900 dark:text-white cursor-pointer hover:text-slate-600 dark:hover:text-slate-300 transition-colors"
+              <div
+                className="group flex items-center gap-2 cursor-pointer"
                 onClick={onCodeClick}
                 role="button"
                 tabIndex={0}
@@ -124,8 +124,11 @@ export function RoomDrawer({
                   }
                 }}
               >
-                {sessionCode}
-              </span>
+                <span className="font-mono text-base text-slate-900 dark:text-white group-hover:text-slate-600 dark:group-hover:text-slate-300 transition-colors">
+                  {sessionCode}
+                </span>
+                <Copy className="h-4 w-4 text-slate-500 opacity-0 group-hover:opacity-100 transition-opacity dark:text-slate-400" />
+              </div>
               <Button variant="outline" size="sm" onClick={onShareClick}>
                 <Share2 className="mr-2 h-4 w-4" />
                 {shareCopied ? "복사됨!" : "복사"}

@@ -13,7 +13,7 @@ import { useSessionState } from "@/hooks/useSessionState";
 import { deleteSession } from "@/lib/questions";
 import { useSessionStore } from "@/lib/stores/session-store";
 import type { Question } from "@/lib/types";
-import { addVisitedSession, cn } from "@/lib/utils";
+import { addVisitedSession, cn, copyToClipboard } from "@/lib/utils";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { useRouter } from "next/navigation";
 import { useEffect, useMemo, useState } from "react";
@@ -118,9 +118,6 @@ export function RoomView({ sessionCode }: RoomViewProps) {
   useEffect(() => {
     const checkScreenSize = () => {
       const isLargeScreen = window.innerWidth >= 1366;
-
-      console.log("isLargeScreen", isLargeScreen);
-      console.log("isRoomDrawerOpen", isRoomDrawerOpen);
 
       if (isLargeScreen && !isRoomDrawerOpen) {
         setRoomDrawerOpen(true);
@@ -327,18 +324,22 @@ export function RoomView({ sessionCode }: RoomViewProps) {
       : `/room/${sessionCode}`;
 
   const copyShareUrl = async () => {
-    if (typeof navigator !== "undefined" && navigator.clipboard) {
-      await navigator.clipboard.writeText(shareUrl);
+    const success = await copyToClipboard(shareUrl);
+    if (success) {
       setShareCopied(true);
       setTimeout(() => setShareCopied(false), 2000);
       toast.success("방 주소가 복사되었습니다!");
+    } else {
+      toast.error("복사에 실패했습니다. 다시 시도해주세요.");
     }
   };
 
   const copySessionCode = async () => {
-    if (typeof navigator !== "undefined" && navigator.clipboard) {
-      await navigator.clipboard.writeText(sessionCode);
+    const success = await copyToClipboard(sessionCode);
+    if (success) {
       toast.success("방 코드가 복사되었습니다!");
+    } else {
+      toast.error("복사에 실패했습니다. 다시 시도해주세요.");
     }
   };
 
