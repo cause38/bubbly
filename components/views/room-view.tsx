@@ -5,6 +5,7 @@ import { EditSessionModal } from "@/components/edit-session-modal";
 import { QuestionCard } from "@/components/question-card";
 import { QuestionForm } from "@/components/question-form";
 import { RoomDrawer } from "@/components/room-drawer";
+import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useQuestions } from "@/hooks/useQuestions";
 import { useSessionState } from "@/hooks/useSessionState";
@@ -52,6 +53,7 @@ export function RoomView({ sessionCode }: RoomViewProps) {
     isRoomDrawerOpen: state.isRoomDrawerOpen,
     setRoomDrawerOpen: state.setRoomDrawerOpen,
   }));
+  console.log("user", user);
   const [shareCopied, setShareCopied] = useState(false);
   const [reactionMap, setReactionMap] = useState<Record<string, "like">>({});
   const [hostTab, setHostTab] = useState<
@@ -62,6 +64,9 @@ export function RoomView({ sessionCode }: RoomViewProps) {
   );
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const [isDeleteConfirmOpen, setIsDeleteConfirmOpen] = useState(false);
+  const [isDeleteQuestionConfirmOpen, setIsDeleteQuestionConfirmOpen] =
+    useState(false);
+  const [questionToDelete, setQuestionToDelete] = useState<string | null>(null);
 
   useEffect(() => {
     setSessionCode(sessionCode);
@@ -77,7 +82,6 @@ export function RoomView({ sessionCode }: RoomViewProps) {
   }, [session?.title, setSessionTitle]);
 
   useEffect(() => {
-    if (typeof window === "undefined") return;
     const key = `bubbly:reactions:${sessionCode}`;
     const stored = window.localStorage.getItem(key);
     if (stored) {
@@ -97,8 +101,6 @@ export function RoomView({ sessionCode }: RoomViewProps) {
       if (isLargeScreen && !isRoomDrawerOpen) {
         setRoomDrawerOpen(true);
       }
-      console.log("isLargeScreen", isLargeScreen);
-      console.log("isRoomDrawerOpen", isRoomDrawerOpen);
 
       if (!isLargeScreen && isRoomDrawerOpen) {
         setRoomDrawerOpen(false);
@@ -231,6 +233,19 @@ export function RoomView({ sessionCode }: RoomViewProps) {
     }
   };
 
+  const handleDeleteQuestion = (questionId: string) => {
+    setQuestionToDelete(questionId);
+    setIsDeleteQuestionConfirmOpen(true);
+  };
+
+  const confirmDeleteQuestion = () => {
+    if (questionToDelete) {
+      remove(questionToDelete);
+      setIsDeleteQuestionConfirmOpen(false);
+      setQuestionToDelete(null);
+    }
+  };
+
   const shareUrl =
     typeof window !== "undefined"
       ? `${window.location.origin}/room/${sessionCode}`
@@ -247,67 +262,63 @@ export function RoomView({ sessionCode }: RoomViewProps) {
 
   if (!session) {
     return (
-      <div className="flex h-full items-center justify-center text-slate-600 dark:text-slate-400">
-        존재하지 않는 방입니다.
+      <div className="flex h-full flex-col items-center justify-center gap-4 text-center text-slate-600 dark:text-slate-400">
+        <p>존재하지 않는 방입니다.</p>
+        <Button onClick={() => router.push("/")} theme="slate">
+          홈으로 돌아가기
+        </Button>
       </div>
     );
   }
 
   return (
-    <div className="relative mx-auto flex w-full min-h-full max-w-3xl flex-col gap-6 px-4 lg:ml-80">
+    <div className="relative mx-auto flex w-full min-h-full max-w-3xl flex-col gap-6 px-4">
       {isQuestionSubmissionAllowed && session.isActive && (
         <QuestionForm sessionCode={sessionCode} />
       )}
 
       {isHost ? (
         <section className="space-y-4">
-          <div className="flex items-center justify-between gap-4">
-            <Tabs
-              value={hostTab}
-              onValueChange={(value) =>
-                setHostTab(value as "pending" | "approved" | "archived" | "all")
-              }
-            >
-              <TabsList>
-                <TabsTrigger value="all" className="relative">
-                  전체
-                  <span className="ml-2 rounded-full bg-slate-200 px-2 py-0.5 text-xs text-slate-700 dark:bg-slate-500/20 dark:text-slate-300">
-                    {questions.length}
-                  </span>
-                </TabsTrigger>
-                <TabsTrigger value="pending" className="relative">
-                  대기
-                  <span
-                    className={cn(
-                      "ml-2 rounded-full px-2 py-0.5 text-xs",
-                      pendingQuestions.length > 0
-                        ? "bg-amber-500/20 text-amber-300"
-                        : "bg-slate-200 text-slate-700 dark:bg-slate-500/20 dark:text-slate-300"
-                    )}
-                  >
-                    {pendingQuestions.length}
-                  </span>
-                </TabsTrigger>
-                <TabsTrigger value="approved" className="relative">
-                  승인
-                  <span className="ml-2 rounded-full bg-slate-200 px-2 py-0.5 text-xs text-slate-700 dark:bg-slate-500/20 dark:text-slate-300">
-                    {approvedQuestions.length}
-                  </span>
-                </TabsTrigger>
-                <TabsTrigger value="archived" className="relative">
-                  반려
-                  <span className="ml-2 rounded-full bg-slate-200 px-2 py-0.5 text-xs text-slate-700 dark:bg-slate-500/20 dark:text-slate-300">
-                    {archivedQuestions.length}
-                  </span>
-                </TabsTrigger>
-              </TabsList>
-            </Tabs>
-            {hostTab !== "all" && (
-              <span className="text-sm text-slate-600 dark:text-slate-400">
-                {questions.length}개
-              </span>
-            )}
-          </div>
+          <Tabs
+            value={hostTab}
+            onValueChange={(value) =>
+              setHostTab(value as "pending" | "approved" | "archived" | "all")
+            }
+          >
+            <TabsList>
+              <TabsTrigger value="all" className="relative">
+                전체
+                <span className="ml-2 rounded-full bg-slate-200 px-2 py-0.5 text-xs text-slate-700 dark:bg-slate-500/20 dark:text-slate-300">
+                  {questions.length}
+                </span>
+              </TabsTrigger>
+              <TabsTrigger value="pending" className="relative">
+                대기
+                <span
+                  className={cn(
+                    "ml-2 rounded-full px-2 py-0.5 text-xs",
+                    pendingQuestions.length > 0
+                      ? "bg-amber-500/20 text-amber-600"
+                      : "bg-slate-200 text-slate-700 dark:bg-slate-500/20 dark:text-slate-300"
+                  )}
+                >
+                  {pendingQuestions.length}
+                </span>
+              </TabsTrigger>
+              <TabsTrigger value="approved" className="relative">
+                승인
+                <span className="ml-2 rounded-full bg-slate-200 px-2 py-0.5 text-xs text-slate-700 dark:bg-slate-500/20 dark:text-slate-300">
+                  {approvedQuestions.length}
+                </span>
+              </TabsTrigger>
+              <TabsTrigger value="archived" className="relative">
+                반려
+                <span className="ml-2 rounded-full bg-slate-200 px-2 py-0.5 text-xs text-slate-700 dark:bg-slate-500/20 dark:text-slate-300">
+                  {archivedQuestions.length}
+                </span>
+              </TabsTrigger>
+            </TabsList>
+          </Tabs>
 
           <Tabs value={hostTab}>
             <TabsContent value="all">
@@ -319,11 +330,12 @@ export function RoomView({ sessionCode }: RoomViewProps) {
                 </div>
               ) : questions.length ? (
                 <div className="space-y-3">
-                  {questions.map((question: Question) => (
+                  {questions.map((question: Question, index) => (
                     <QuestionCard
                       key={question.id}
                       question={question}
                       mode="host"
+                      index={index}
                       userReaction={reactionMap[question.id] ?? null}
                       onStatusChange={(status) => {
                         if (status === "approved") {
@@ -333,7 +345,7 @@ export function RoomView({ sessionCode }: RoomViewProps) {
                         }
                       }}
                       onReact={() => handleReaction(question.id)}
-                      onDelete={() => remove(question.id)}
+                      onDelete={() => handleDeleteQuestion(question.id)}
                       onHighlight={() =>
                         handleHighlight(
                           question.id,
@@ -357,11 +369,12 @@ export function RoomView({ sessionCode }: RoomViewProps) {
                   <QuestionSkeleton />
                 </div>
               ) : pendingQuestions.length ? (
-                pendingQuestions.map((question: Question) => (
+                pendingQuestions.map((question: Question, index) => (
                   <QuestionCard
                     key={question.id}
                     question={question}
                     mode="host"
+                    index={index}
                     userReaction={reactionMap[question.id] ?? null}
                     onStatusChange={(status) => {
                       if (status === "approved") {
@@ -395,11 +408,12 @@ export function RoomView({ sessionCode }: RoomViewProps) {
                   <QuestionSkeleton />
                 </>
               ) : approvedQuestions.length ? (
-                approvedQuestions.map((question: Question) => (
+                approvedQuestions.map((question: Question, index) => (
                   <QuestionCard
                     key={question.id}
                     question={question}
                     mode="host"
+                    index={index}
                     userReaction={reactionMap[question.id] ?? null}
                     onStatusChange={(status) => {
                       if (status === "approved") {
@@ -428,11 +442,12 @@ export function RoomView({ sessionCode }: RoomViewProps) {
             <TabsContent value="archived">
               {archivedQuestions.length ? (
                 <div className="space-y-3">
-                  {archivedQuestions.map((question: Question) => (
+                  {archivedQuestions.map((question: Question, index) => (
                     <QuestionCard
                       key={question.id}
                       question={question}
                       mode="host"
+                      index={index}
                       userReaction={reactionMap[question.id] ?? null}
                       onStatusChange={(status) => {
                         if (status === "approved") {
@@ -440,7 +455,7 @@ export function RoomView({ sessionCode }: RoomViewProps) {
                         }
                       }}
                       onReact={() => handleReaction(question.id)}
-                      onDelete={() => remove(question.id)}
+                      onDelete={() => handleDeleteQuestion(question.id)}
                     />
                   ))}
                 </div>
@@ -454,7 +469,7 @@ export function RoomView({ sessionCode }: RoomViewProps) {
         </section>
       ) : (
         <section className="space-y-4">
-          <div className="flex items-center justify-between gap-4">
+          <div className="flex items-end justify-between gap-4">
             <Tabs
               value={viewerSortTab}
               onValueChange={(value) =>
@@ -481,11 +496,12 @@ export function RoomView({ sessionCode }: RoomViewProps) {
                 </div>
               ) : sortedApprovedQuestions.length ? (
                 <div className="space-y-3">
-                  {sortedApprovedQuestions.map((question: Question) => (
+                  {sortedApprovedQuestions.map((question: Question, index) => (
                     <QuestionCard
                       key={question.id}
                       question={question}
                       mode="viewer"
+                      index={index}
                       userReaction={reactionMap[question.id] ?? null}
                       onReact={() => handleReaction(question.id)}
                     />
@@ -506,11 +522,12 @@ export function RoomView({ sessionCode }: RoomViewProps) {
                 </div>
               ) : sortedApprovedQuestions.length ? (
                 <div className="space-y-3">
-                  {sortedApprovedQuestions.map((question: Question) => (
+                  {sortedApprovedQuestions.map((question: Question, index) => (
                     <QuestionCard
                       key={question.id}
                       question={question}
                       mode="viewer"
+                      index={index}
                       userReaction={reactionMap[question.id] ?? null}
                       onReact={() => handleReaction(question.id)}
                     />
@@ -551,17 +568,34 @@ export function RoomView({ sessionCode }: RoomViewProps) {
       )}
 
       {isHost && (
-        <ConfirmDialog
-          open={isDeleteConfirmOpen}
-          onOpenChange={setIsDeleteConfirmOpen}
-          title="방 삭제 확인"
-          description="방을 삭제하면 모든 질문이 영구적으로 삭제됩니다. 이 작업은 되돌릴 수 없습니다. 정말로 이 방을 삭제하시겠습니까?"
-          confirmText="삭제"
-          cancelText="취소"
-          variant="destructive"
-          onConfirm={() => deleteSessionMutation.mutate()}
-          isLoading={deleteSessionMutation.isPending}
-        />
+        <>
+          <ConfirmDialog
+            open={isDeleteConfirmOpen}
+            onOpenChange={setIsDeleteConfirmOpen}
+            title="방 삭제 확인"
+            description="방을 삭제하면 모든 질문이 영구적으로 삭제됩니다. 이 작업은 되돌릴 수 없습니다. 정말로 이 방을 삭제하시겠습니까?"
+            confirmText="삭제"
+            cancelText="취소"
+            variant="destructive"
+            onConfirm={() => deleteSessionMutation.mutate()}
+            isLoading={deleteSessionMutation.isPending}
+          />
+          <ConfirmDialog
+            open={isDeleteQuestionConfirmOpen}
+            onOpenChange={(open) => {
+              setIsDeleteQuestionConfirmOpen(open);
+              if (!open) {
+                setQuestionToDelete(null);
+              }
+            }}
+            title="질문 삭제 확인"
+            description="이 질문을 삭제하면 다시 되돌릴 수 없습니다. 정말로 이 질문을 삭제하시겠습니까?"
+            confirmText="삭제"
+            cancelText="취소"
+            variant="destructive"
+            onConfirm={confirmDeleteQuestion}
+          />
+        </>
       )}
     </div>
   );

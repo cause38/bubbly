@@ -1,5 +1,6 @@
 "use client";
 
+import { Button } from "@/components/ui/button";
 import {
   Dialog,
   DialogContent,
@@ -7,7 +8,6 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import { Button } from "@/components/ui/button";
 
 interface ConfirmDialogProps {
   open: boolean;
@@ -54,12 +54,8 @@ export function ConfirmDialog({
           <Button
             onClick={handleConfirm}
             disabled={isLoading}
-            variant={variant === "destructive" ? "outline" : "default"}
-            className={
-              variant === "destructive"
-                ? "bg-red-600 text-white hover:bg-red-700 border-red-600"
-                : ""
-            }
+            variant="default"
+            theme={variant === "destructive" ? "red" : "brand"}
           >
             {isLoading ? "처리 중..." : confirmText}
           </Button>
@@ -68,4 +64,3 @@ export function ConfirmDialog({
     </Dialog>
   );
 }
-

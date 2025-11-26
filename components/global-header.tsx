@@ -78,20 +78,22 @@ export function GlobalHeader() {
 
   return (
     <header className="sticky top-0 z-50 flex items-center justify-between border-b border-slate-200 bg-indigo-100 px-4 py-3 backdrop-blur-xl dark:border-white/10 dark:bg-black/40">
-      <div className="flex items-center gap-2">
+      <div className="flex items-center gap-3">
         {inRoom && (
-          <button
-            type="button"
+          <Button
             aria-label="방 메뉴 토글"
-            className="flex h-8 w-8 items-center justify-center rounded-md border border-slate-300 bg-white text-slate-700 hover:border-slate-400 hover:text-slate-900 dark:border-white/10 dark:bg-black/40 dark:text-slate-200 dark:hover:border-white/40 dark:hover:text-white"
+            variant="outline"
+            theme="brand"
+            className="h-8 w-8 p-0"
             onClick={() => setRoomDrawerOpen(!isRoomDrawerOpen)}
           >
             <Menu className="h-4 w-4" />
-          </button>
+            <span className="sr-only">방 메뉴 토글</span>
+          </Button>
         )}
         <Link
           href="/"
-          className="text-lg font-bold tracking-tight text-slate-900 dark:text-white"
+          className="text-lg font-bold tracking-tight text-indigo-600 dark:text-white"
         >
           Bubbly
         </Link>
@@ -103,10 +105,11 @@ export function GlobalHeader() {
       </div>
       <div className="flex items-center gap-2">
         {mounted && (
-          <button
-            type="button"
-            aria-label="테마 전환"
-            className="flex h-9 w-9 items-center justify-center rounded-md border border-slate-200 bg-slate-100 text-slate-700 hover:border-slate-300 hover:text-slate-900 dark:border-white/10 dark:bg-black/40 dark:text-slate-200 dark:hover:border-white/40 dark:hover:text-white"
+          <Button
+            size="sm"
+            variant="ghost"
+            theme="slate"
+            className="h-9 w-9 p-0"
             onClick={() => setTheme(theme === "dark" ? "light" : "dark")}
           >
             {theme === "dark" ? (
@@ -114,14 +117,16 @@ export function GlobalHeader() {
             ) : (
               <Sun className="h-4 w-4" />
             )}
-          </button>
+            <span className="sr-only">테마 전환</span>
+          </Button>
         )}
         <Popover open={isPopoverOpen} onOpenChange={setIsPopoverOpen}>
           <PopoverTrigger asChild>
             <Button
               size="sm"
               variant="ghost"
-              className="h-9 w-9 rounded-full p-0 text-slate-700 hover:text-slate-900 dark:text-slate-200 dark:hover:text-white"
+              theme="brand"
+              className="h-9 w-9 p-0"
             >
               <User className="h-4 w-4 shrink-0" />
               <span className="sr-only">사용자 메뉴</span>
@@ -131,21 +136,17 @@ export function GlobalHeader() {
             {user ? (
               <div className="space-y-1">
                 <div className="px-3 py-2 text-xs text-slate-600 dark:text-slate-400">
-                  {user.displayName ?? user.email ?? "로그인됨"}
+                  {user.displayName ?? user.email ?? "(알 수 없는 사용자)"}
                 </div>
                 <Separator />
                 <button
-                  onClick={() => {
-                    handleOpenCreateModal();
-                  }}
+                  onClick={handleOpenCreateModal}
                   className="flex w-full items-center gap-2 rounded-md px-3 py-2 text-sm text-slate-900 hover:bg-slate-100 dark:text-slate-200 dark:hover:bg-slate-800"
                 >
                   <PlusCircle className="h-4 w-4" />방 만들기
                 </button>
                 <button
-                  onClick={() => {
-                    handleSignOut();
-                  }}
+                  onClick={handleSignOut}
                   disabled={loading}
                   className="flex w-full items-center gap-2 rounded-md px-3 py-2 text-sm text-slate-900 hover:bg-slate-100 disabled:opacity-50 dark:text-slate-200 dark:hover:bg-slate-800"
                 >
@@ -156,9 +157,7 @@ export function GlobalHeader() {
             ) : (
               <div className="p-1">
                 <button
-                  onClick={() => {
-                    handleSignIn();
-                  }}
+                  onClick={handleSignIn}
                   disabled={loading}
                   className="flex w-full items-center gap-2 rounded-md px-3 py-2 text-sm text-slate-900 hover:bg-slate-100 disabled:opacity-50 dark:text-slate-200 dark:hover:bg-slate-800"
                 >

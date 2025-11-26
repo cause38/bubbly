@@ -1,4 +1,3 @@
-import { increment } from "firebase/database";
 import {
   createItem,
   deleteItem,
@@ -14,6 +13,7 @@ import type {
   QuestionStatus,
   SessionState,
 } from "@/lib/types";
+import { increment } from "firebase/database";
 import { nanoid } from "nanoid";
 
 export function getSessionPath(sessionCode: string) {
@@ -102,34 +102,39 @@ export async function toggleQuestionHighlight(
     const approvedQuestions = allQuestions.filter(
       (q) => q.status === "approved" && q.id !== questionId && q.highlighted
     );
-    
+
     // 기존 하이라이트된 질문들 해제 및 새로운 질문 하이라이트를 배치로 실행
     const updates: Record<string, any> = {};
-    
+
     // 기존 하이라이트된 질문들 해제
     for (const question of approvedQuestions) {
-      updates[`${getQuestionPath(question.id, sessionCode)}/highlighted`] = false;
+      updates[`${getQuestionPath(question.id, sessionCode)}/highlighted`] =
+        false;
     }
-    
+
     // 새로운 질문 하이라이트
     updates[`${getQuestionPath(questionId, sessionCode)}/highlighted`] = true;
-    
+
     // 모든 업데이트를 한 번에 실행
     if (Object.keys(updates).length > 0) {
       const { getFirebaseServices } = await import("@/lib/firebase");
       const { db } = getFirebaseServices();
       const { ref, update: firebaseUpdate } = await import("firebase/database");
       const rootRef = ref(db);
-      
+
       // Firebase의 update 함수는 root ref에서 상대 경로를 사용
       await firebaseUpdate(rootRef, updates);
     } else {
       // 새로운 질문만 하이라이트 (기존 하이라이트가 없는 경우)
-      await updateItem(getQuestionPath(questionId, sessionCode), { highlighted: true });
+      await updateItem(getQuestionPath(questionId, sessionCode), {
+        highlighted: true,
+      });
     }
   } else {
     // 하이라이트 해제만 하면 됨
-    await updateItem(getQuestionPath(questionId, sessionCode), { highlighted: false });
+    await updateItem(getQuestionPath(questionId, sessionCode), {
+      highlighted: false,
+    });
   }
 }
 
@@ -139,43 +144,56 @@ export async function deleteQuestion(questionId: string, sessionCode: string) {
 
 export async function endSession(sessionCode: string) {
   const now = Date.now();
-  await updateItem(`${getSessionPath(sessionCode)}/metadata`, {
-    isActive: false,
-    endedAt: now,
-  });
   const metadata = await readItem<SessionState>(
     `${getSessionPath(sessionCode)}/metadata`
   );
-  if (metadata?.hostUid) {
-    await updateItem(
-      `${getHostSessionsPath(metadata.hostUid)}/${sessionCode}`,
-      {
-        isActive: metadata.isActive,
-        endedAt: metadata.endedAt ?? now,
-      }
-    );
+
+  if (!metadata) {
+    throw new Error("세션을 찾을 수 없습니다.");
   }
-  return metadata;
+
+  // endDate가 지나있으면 종료할 수 없음
+  if (metadata.endDate && metadata.endDate < now) {
+    throw new Error("세션 종료일이 지나서 종료할 수 없습니다.");
+  }
+
+  // endedAt은 변경하지 않고, isActive만 false로 변경
+  await updateItem(`${getSessionPath(sessionCode)}/metadata`, {
+    isActive: false,
+  });
+
+  const updatedMetadata = await readItem<SessionState>(
+    `${getSessionPath(sessionCode)}/metadata`
+  );
+
+  return updatedMetadata;
 }
 
 export async function reactivateSession(sessionCode: string) {
-  await updateItem(`${getSessionPath(sessionCode)}/metadata`, {
-    isActive: true,
-    endedAt: null,
-  });
+  const now = Date.now();
   const metadata = await readItem<SessionState>(
     `${getSessionPath(sessionCode)}/metadata`
   );
-  if (metadata?.hostUid) {
-    await updateItem(
-      `${getHostSessionsPath(metadata.hostUid)}/${sessionCode}`,
-      {
-        isActive: true,
-        endedAt: null,
-      }
-    );
+
+  if (!metadata) {
+    throw new Error("세션을 찾을 수 없습니다.");
   }
-  return metadata;
+
+  // endDate가 지나있으면 재개할 수 없음
+  if (metadata.endDate && metadata.endDate < now) {
+    throw new Error("세션 종료일이 지나서 재개할 수 없습니다.");
+  }
+
+  // endedAt은 변경하지 않고, isActive만 true로 변경
+  await updateItem(`${getSessionPath(sessionCode)}/metadata`, {
+    isActive: true,
+  });
+
+  const updatedMetadata = await readItem<SessionState>(
+    `${getSessionPath(sessionCode)}/metadata`
+  );
+
+  return updatedMetadata;
 }
 
 export async function updateSession(

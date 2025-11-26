@@ -1,5 +1,6 @@
 "use client";
 
+import { SessionStatusBadge } from "@/components/session-status-badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { useHostSessions } from "@/hooks/useHostSessions";
@@ -29,10 +30,10 @@ export function HomeView() {
   return (
     <div className="mx-auto flex h-full overflow-y-auto items-center justify-center w-full max-w-lg flex-col gap-10 px-4">
       <section className="grid gap-6 w-full">
-        <div className="space-y-4 rounded-2xl border border-slate-200 bg-white p-6 dark:border-slate-800 dark:bg-slate-950/60">
+        <div className="space-y-4 rounded-2xl border border-brand/60 bg-brand/10 p-6 dark:border-slate-800 dark:bg-slate-950/60">
           <div className="flex items-center gap-2 text-slate-900 dark:text-slate-200">
             <KeyRound className="h-5 w-5 text-brand" />
-            <h2 className="text-xl font-semibold">방 코드로 참여하기</h2>
+            <h2 className="text-xl font-semibold">코드로 참여하기</h2>
           </div>
           <p className="text-sm text-slate-600 dark:text-slate-400">
             공유받은 방 주소 또는 방 코드를 입력하면 바로 참여할 수 있습니다.
@@ -43,11 +44,16 @@ export function HomeView() {
               onChange={(event) =>
                 setJoinCode(event.target.value.toUpperCase())
               }
-              placeholder="방 코드를 입력하세요 (예: ABC123)"
+              placeholder="코드를 입력하세요 (예: ABC123)"
               className="text-base"
               maxLength={12}
             />
-            <Button type="submit" className="w-full" variant="secondary">
+            <Button
+              type="submit"
+              className="w-full"
+              variant="default"
+              disabled={!joinCode.replaceAll(" ", "").length}
+            >
               <ArrowRight className="mr-2 h-4 w-4" />
               참여하기
             </Button>
@@ -56,8 +62,8 @@ export function HomeView() {
       </section>
 
       {user ? (
-        <section className="space-y-4 w-full">
-          <h2 className="text-xl font-semibold text-slate-900 dark:text-white pl-2">
+        <section className="space-y-2 w-full">
+          <h2 className="text-xl font-semibold text-slate-900 dark:text-white pl-1">
             내가 만든 방
           </h2>
           <Suspense fallback={<HostSessionsSkeleton />}>
@@ -106,19 +112,11 @@ function HostSessionsList({ hostUid }: { hostUid: string }) {
                     timeStyle: "short",
                   })}
                 </span>
-                {session.isActive ? (
-                  <span className="rounded-full border border-emerald-500 px-2 py-0.5 text-xs text-emerald-300">
-                    진행 중
-                  </span>
-                ) : (
-                  <span className="rounded-full border border-slate-700 px-2 py-0.5 text-xs text-slate-400">
-                    종료됨
-                  </span>
-                )}
+                <SessionStatusBadge isActive={session.isActive} />
               </div>
             </div>
             <Button
-              variant="outline"
+              variant="secondary"
               onClick={() => router.push(`/room/${session.code}`)}
             >
               방으로 이동

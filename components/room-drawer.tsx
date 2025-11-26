@@ -1,12 +1,15 @@
 "use client";
 
+import { SessionStatusBadge } from "@/components/session-status-badge";
 import { Button } from "@/components/ui/button";
+import { ConfirmDialog } from "@/components/confirm-dialog";
 import { endSession, reactivateSession } from "@/lib/questions";
 import { useSessionStore } from "@/lib/stores/session-store";
 import type { SessionState } from "@/lib/types";
 import { cn } from "@/lib/utils";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { Edit2, PlayCircle, Share2, Trash2, XCircle } from "lucide-react";
+import { useState } from "react";
 import { toast } from "sonner";
 
 interface RoomDrawerProps {
@@ -34,6 +37,7 @@ export function RoomDrawer({
     user: state.user,
   }));
   const queryClient = useQueryClient();
+  const [isEndConfirmOpen, setIsEndConfirmOpen] = useState(false);
 
   const isHost = Boolean(
     session?.hostUid && user?.uid && session.hostUid === user.uid
@@ -51,7 +55,8 @@ export function RoomDrawer({
       toast.success("방이 종료되었습니다.");
       queryClient.invalidateQueries({ queryKey: ["session", sessionCode] });
     },
-    onError: () => {
+    onError: (e: unknown) => {
+      console.error(e);
       toast.error("방 종료에 실패했습니다.");
     },
   });
@@ -77,7 +82,7 @@ export function RoomDrawer({
       )}
       <aside
         className={cn(
-          "max-h-[calc(100vh-61px)] overflow-y-auto fixed left-0 top-[61px] bottom-0 z-50 w-80 max-w-[80%] border-r border-slate-200 bg-white/95 px-4 py-6 shadow-xl backdrop-blur-xl transition-transform duration-300 dark:border-white/10 dark:bg-slate-950/95",
+          "max-h-[calc(100vh-61px)] min-w-[20rem] overflow-y-auto fixed left-0 top-[61px] bottom-0 z-50 w-80 max-w-[80%] border-r border-slate-200 bg-white px-4 py-6 shadow-xl backdrop-blur-xl transition-transform duration-300 dark:border-white/10 dark:bg-slate-950/95",
           isOpen ? "translate-x-0" : "-translate-x-full"
         )}
       >
@@ -128,15 +133,7 @@ export function RoomDrawer({
             </span>
             <div className="mt-1 flex items-center gap-2 text-slate-900 dark:text-white">
               {session.hostDisplayName}
-              {session.isActive ? (
-                <span className="rounded-full border border-emerald-500 px-2 py-0.5 text-xs text-emerald-300">
-                  진행 중
-                </span>
-              ) : (
-                <span className="rounded-full border border-slate-300 px-2 py-0.5 text-xs text-slate-600 dark:border-slate-700 dark:text-slate-400">
-                  종료됨
-                </span>
-              )}
+              <SessionStatusBadge isActive={session.isActive} />
             </div>
           </div>
           <div>
@@ -177,9 +174,10 @@ export function RoomDrawer({
               {session.isActive && isBeforeEndDate ? (
                 <Button
                   variant="outline"
-                  onClick={() => endSessionMutation.mutate()}
+                  theme="amber"
+                  onClick={() => setIsEndConfirmOpen(true)}
                   disabled={endSessionMutation.isPending}
-                  className="w-full gap-2 text-red-400 hover:text-red-300 hover:border-red-500"
+                  className="w-full gap-2"
                 >
                   <XCircle className="h-4 w-4" />방 종료
                 </Button>
@@ -187,21 +185,23 @@ export function RoomDrawer({
               {!session.isActive && isBeforeEndDate ? (
                 <Button
                   variant="outline"
+                  theme="emerald"
                   onClick={() => reactivateSessionMutation.mutate()}
                   disabled={reactivateSessionMutation.isPending}
-                  className="w-full gap-2 text-emerald-400 hover:text-emerald-300 hover:border-emerald-500"
+                  className="w-full gap-2"
                 >
                   <PlayCircle className="h-4 w-4" />방 재개
                 </Button>
               ) : null}
               <Button
                 variant="outline"
+                theme="red"
                 onClick={onDeleteClick}
                 disabled={
                   endSessionMutation.isPending ||
                   reactivateSessionMutation.isPending
                 }
-                className="w-full gap-2 text-red-400 hover:text-red-300 hover:border-red-500"
+                className="w-full gap-2"
               >
                 <Trash2 className="h-4 w-4" />방 삭제
               </Button>
@@ -209,6 +209,20 @@ export function RoomDrawer({
           ) : null}
         </div>
       </aside>
+      <ConfirmDialog
+        open={isEndConfirmOpen}
+        onOpenChange={setIsEndConfirmOpen}
+        title="방 종료 확인"
+        description="방을 종료할 경우 질문과 공감을 남길 수 없습니다. 종료일 이전까지는 방을 재개할 수 있습니다. 정말로 방을 종료하시겠습니까?"
+        confirmText="종료"
+        cancelText="취소"
+        variant="destructive"
+        onConfirm={() => {
+          endSessionMutation.mutate();
+          setIsEndConfirmOpen(false);
+        }}
+        isLoading={endSessionMutation.isPending}
+      />
     </>
   );
 }

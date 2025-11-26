@@ -1,5 +1,6 @@
-import { Suspense } from "react";
 import { RoomView } from "@/components/views/room-view";
+import { RoomViewSkeleton } from "@/components/views/room-view-skeleton";
+import { Suspense } from "react";
 
 interface RoomPageProps {
   params: Promise<{
@@ -7,28 +8,11 @@ interface RoomPageProps {
   }>;
 }
 
-function RoomSkeleton() {
-  return (
-    <div className="mx-auto flex h-full w-full max-w-5xl flex-col gap-8 px-4">
-      <div className="h-32 rounded-2xl border border-slate-800 bg-slate-900/60 animate-pulse" />
-      <div className="h-20 rounded-xl border border-slate-800 bg-slate-900/40 animate-pulse" />
-      <div className="space-y-3">
-        {Array.from({ length: 3 }).map((_, index) => (
-          <div
-            key={index}
-            className="h-28 rounded-xl border border-slate-800 bg-slate-900/40 animate-pulse"
-          />
-        ))}
-      </div>
-    </div>
-  );
-}
-
 export default async function RoomPage({ params }: RoomPageProps) {
   const { sessionCode } = await params;
   const code = decodeURIComponent(sessionCode);
   return (
-    <Suspense fallback={<RoomSkeleton />}>
+    <Suspense fallback={<RoomViewSkeleton />}>
       <RoomView sessionCode={code} />
     </Suspense>
   );

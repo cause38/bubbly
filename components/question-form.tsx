@@ -4,6 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { submitQuestion } from "@/lib/questions";
 import type { Question } from "@/lib/types";
+import { cn } from "@/lib/utils";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
 import { toast } from "sonner";
@@ -92,18 +93,15 @@ export function QuestionForm({ sessionCode, disabled }: QuestionFormProps) {
     }
   };
 
-  const handleSubmit = (event: React.FormEvent<HTMLFormElement>) => {
-    event.preventDefault();
+  const trimmedContent = content.replace(/\s+/g, " ").trim();
+  const canSubmit = trimmedContent.length > 0;
 
-    const trimmedContent = content.trim();
-    if (!trimmedContent) {
+  const handleSubmit = () => {
+    if (!canSubmit) {
       toast.error("질문 내용을 입력해주세요.");
       return;
     }
-    if (trimmedContent.length > MAX_LENGTH) {
-      toast.error(`질문은 ${MAX_LENGTH}자까지만 입력 가능합니다.`);
-      return;
-    }
+
     mutation.mutate({ content: trimmedContent });
   };
 
@@ -111,8 +109,11 @@ export function QuestionForm({ sessionCode, disabled }: QuestionFormProps) {
 
   return (
     <form
-      onSubmit={handleSubmit}
-      className="group space-y-4 rounded-2xl border border-slate-200 bg-white p-5 shadow-xl dark:border-slate-800 dark:bg-slate-950/70"
+      onSubmit={(e) => {
+        e.preventDefault();
+        handleSubmit();
+      }}
+      className="group space-y-4 rounded-2xl border border-slate-200 bg-white p-5 shadow-lg shadow-brand/10 dark:border-slate-800 dark:bg-slate-950/70 focus-within:ring-1 focus-within:ring-brand"
     >
       <div className="relative">
         <Textarea
@@ -122,14 +123,18 @@ export function QuestionForm({ sessionCode, disabled }: QuestionFormProps) {
           disabled={disabled || isPending}
           maxLength={MAX_LENGTH}
           className="min-h-[24px] h-[24px] focus:min-h-[120px] transition-[min-height] text-base pr-12 pb-6"
+          onKeyDown={(e) => {
+            if (e.key === "Enter" && !e.shiftKey) {
+              e.preventDefault();
+              handleSubmit();
+            }
+          }}
         />
         <div className="absolute bottom-0 right-0 text-xs text-slate-600 dark:text-slate-400 pointer-events-none">
           <span
-            className={
-              content.length >= MAX_LENGTH
-                ? "text-red-500 dark:text-red-400"
-                : ""
-            }
+            className={cn(
+              content.length >= MAX_LENGTH && "text-red-500 dark:text-red-400"
+            )}
           >
             {content.length}
           </span>
@@ -141,9 +146,8 @@ export function QuestionForm({ sessionCode, disabled }: QuestionFormProps) {
       <div className="justify-end gap-2 hidden group-focus-within:flex">
         <Button
           type="submit"
-          disabled={disabled || isPending}
+          disabled={disabled || isPending || !canSubmit}
           onMouseDown={(e) => {
-            // 버튼 클릭 시 포커스가 벗어나지 않도록 방지
             e.preventDefault();
           }}
         >

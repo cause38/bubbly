@@ -19,6 +19,7 @@ interface QuestionCardProps {
   onDelete?: () => void;
   onReact?: () => void;
   onHighlight?: () => void;
+  index?: number;
 }
 
 export function QuestionCard({
@@ -29,6 +30,7 @@ export function QuestionCard({
   onDelete,
   onReact,
   onHighlight,
+  index = 0,
 }: QuestionCardProps) {
   const timeAgo = formatDistanceToNow(question.createdAt, {
     addSuffix: true,
@@ -44,11 +46,14 @@ export function QuestionCard({
   return (
     <Card
       className={cn(
-        "space-y-3 rounded-2xl border bg-white p-4 shadow-lg backdrop-blur-xl transition duration-300 hover:-translate-y-1 hover:shadow-brand/10 dark:bg-white/5",
+        "card-fade-in space-y-3 rounded-2xl border bg-white p-4 shadow-lg backdrop-blur-xl transition duration-300 hover:-translate-y-1 hover:shadow-brand/10 dark:bg-white/5",
         question.highlighted
           ? "border-brand shadow-brand/20 ring-2 ring-brand/30"
-          : "border-slate-200 hover:border-brand/40 dark:border-white/10"
+          : "border-brand/50 hover:border-brand/40 dark:border-white/10"
       )}
+      style={{
+        animationDelay: `${Math.min(index, 10) * 70}ms`,
+      }}
     >
       <div className="flex items-start justify-between gap-4">
         <div className="flex flex-col gap-2">
@@ -86,16 +91,20 @@ export function QuestionCard({
           <Button
             size="sm"
             variant="outline"
+            theme="emerald"
             onClick={() => onStatusChange?.("approved")}
             disabled={question.status === "approved"}
+            className="hover:!border-emerald-500"
           >
             승인
           </Button>
           <Button
             size="sm"
             variant="outline"
+            theme="amber"
             onClick={() => onStatusChange?.("archived")}
             disabled={question.status === "archived"}
+            className="hover:!border-amber-500"
           >
             반려
           </Button>
@@ -103,12 +112,8 @@ export function QuestionCard({
             <Button
               size="sm"
               variant={question.highlighted ? "default" : "outline"}
+              theme="brand"
               onClick={onHighlight}
-              className={cn(
-                question.highlighted
-                  ? "bg-brand text-white hover:bg-brand/90"
-                  : "hover:border-brand"
-              )}
             >
               <Star
                 className={cn(
@@ -119,12 +124,7 @@ export function QuestionCard({
               하이라이트
             </Button>
           ) : null}
-          <Button
-            size="sm"
-            variant="ghost"
-            onClick={onDelete}
-            className="text-rose-400 hover:text-rose-300"
-          >
+          <Button size="sm" variant="ghost" theme="red" onClick={onDelete}>
             삭제
           </Button>
         </div>
