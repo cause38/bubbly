@@ -102,8 +102,7 @@ export function EditSessionModal({
         <DialogHeader>
           <DialogTitle>방 정보 수정</DialogTitle>
           <DialogDescription>
-            방 이름만 수정할 수 있습니다.
-            <br /> 질문 등록 기간은 변경할 수 없습니다.
+            방 이름만 수정 가능하며, 그 외 설정은 변경할 수 없습니다.
           </DialogDescription>
         </DialogHeader>
         <div className="space-y-4 py-4">

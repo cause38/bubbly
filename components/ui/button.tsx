@@ -8,7 +8,7 @@ import * as React from "react";
 type Theme = "amber" | "red" | "brand" | "slate" | "emerald";
 
 const getThemeClasses = (
-  variant: "default" | "secondary" | "outline" | "ghost",
+  variant: "default" | "secondary" | "outline" | "ghost" | "text",
   theme: Theme
 ) => {
   const themeMap = {
@@ -20,6 +20,7 @@ const getThemeClasses = (
         "border border-slate-300 bg-transparent text-slate-900 lg:hover:border-amber-500 lg:hover:text-amber-600 dark:border-slate-700 dark:text-slate-100 lg:dark:hover:border-amber-500 lg:dark:hover:text-amber-400",
       ghost:
         "bg-transparent text-slate-900 lg:hover:bg-amber-50 lg:hover:text-amber-600 dark:bg-transparent dark:text-slate-100 lg:dark:hover:bg-amber-900/20 lg:dark:hover:text-amber-400",
+      text: "bg-transparent text-amber-600 lg:hover:text-amber-700 dark:text-amber-400 lg:dark:hover:text-amber-300",
     },
     red: {
       default: "bg-red-600 text-white lg:hover:bg-red-700",
@@ -29,6 +30,7 @@ const getThemeClasses = (
         "border border-slate-300 bg-transparent text-slate-900 lg:hover:border-red-500 lg:hover:text-red-600 dark:border-slate-700 dark:text-slate-100 lg:dark:hover:border-red-500 lg:dark:hover:text-red-400",
       ghost:
         "bg-transparent text-slate-900 lg:hover:bg-red-50 lg:hover:text-red-600 dark:bg-transparent dark:text-slate-100 lg:dark:hover:bg-red-900/20 lg:dark:hover:text-red-400",
+      text: "bg-transparent text-red-600 lg:hover:text-red-700 dark:text-red-400 lg:dark:hover:text-red-300",
     },
     brand: {
       default: "bg-brand text-brand-foreground lg:hover:bg-brand/90",
@@ -38,6 +40,7 @@ const getThemeClasses = (
         "border border-slate-300 bg-transparent text-slate-900 lg:hover:border-brand lg:hover:text-brand dark:border-slate-700 dark:text-slate-100 lg:dark:hover:border-brand lg:dark:hover:text-brand",
       ghost:
         "bg-transparent text-slate-900 lg:hover:bg-brand/10 lg:hover:text-brand dark:bg-transparent dark:text-slate-100 lg:dark:hover:bg-brand/20 lg:dark:hover:text-brand",
+      text: "bg-transparent text-brand lg:hover:text-brand/80 dark:text-brand lg:dark:hover:text-brand/80",
     },
     slate: {
       default: "bg-slate-600 text-white lg:hover:bg-slate-700",
@@ -47,6 +50,7 @@ const getThemeClasses = (
         "border border-slate-300 bg-transparent text-slate-900 lg:hover:border-slate-500 lg:hover:text-slate-600 dark:border-slate-700 dark:text-slate-100 lg:dark:hover:border-slate-500 lg:dark:hover:text-slate-400",
       ghost:
         "bg-transparent text-slate-900 lg:hover:bg-slate-100 dark:bg-transparent dark:text-slate-100 lg:dark:hover:bg-slate-800",
+      text: "bg-transparent text-slate-100 lg:hover:text-slate-700 dark:text-slate-400 lg:dark:hover:text-slate-300",
     },
     emerald: {
       default: "bg-emerald-600 text-white lg:hover:bg-emerald-700",
@@ -56,6 +60,7 @@ const getThemeClasses = (
         "border border-slate-300 bg-transparent text-slate-900 lg:hover:border-emerald-500 lg:hover:text-emerald-600 dark:border-slate-700 dark:text-slate-100 lg:dark:hover:border-emerald-500 lg:dark:hover:text-emerald-400",
       ghost:
         "bg-transparent text-slate-900 lg:hover:bg-emerald-50 lg:hover:text-emerald-600 dark:bg-transparent dark:text-slate-100 lg:dark:hover:bg-emerald-900/20 lg:dark:hover:text-emerald-400",
+      text: "bg-transparent text-emerald-600 lg:hover:text-emerald-700 dark:text-emerald-400 lg:dark:hover:text-emerald-300",
     },
   };
 
@@ -71,6 +76,7 @@ const buttonVariants = cva(
         secondary: "",
         outline: "",
         ghost: "",
+        text: "",
       },
       theme: {
         amber: "",
@@ -195,6 +201,32 @@ const buttonVariants = cva(
         variant: "ghost",
         theme: "emerald",
         class: getThemeClasses("ghost", "emerald"),
+      },
+      // text variant
+      {
+        variant: "text",
+        theme: "amber",
+        class: getThemeClasses("text", "amber"),
+      },
+      {
+        variant: "text",
+        theme: "red",
+        class: getThemeClasses("text", "red"),
+      },
+      {
+        variant: "text",
+        theme: "brand",
+        class: getThemeClasses("text", "brand"),
+      },
+      {
+        variant: "text",
+        theme: "slate",
+        class: getThemeClasses("text", "slate"),
+      },
+      {
+        variant: "text",
+        theme: "emerald",
+        class: getThemeClasses("text", "emerald"),
       },
     ],
   }

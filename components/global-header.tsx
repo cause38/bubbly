@@ -77,12 +77,12 @@ export function GlobalHeader() {
   };
 
   return (
-    <header className="sticky top-0 z-50 flex items-center justify-between border-b border-slate-200 bg-indigo-100 px-4 py-3 backdrop-blur-xl dark:border-white/10 dark:bg-black/40">
+    <header className="sticky top-0 z-50 flex items-center justify-between border-b border-slate-200 bg-brand px-4 py-3 backdrop-blur-xl dark:border-white/10 dark:bg-black/40">
       <div className="flex items-center gap-3">
         {inRoom && (
           <Button
             variant="secondary"
-            theme="brand"
+            theme="slate"
             className="h-8 w-8 p-0"
             onClick={() => setRoomDrawerOpen(!isRoomDrawerOpen)}
           >
@@ -92,22 +92,22 @@ export function GlobalHeader() {
         )}
         <Link
           href="/"
-          className="text-lg font-bold tracking-tight text-indigo-600 dark:text-white"
+          className="text-lg font-bold tracking-tight text-white dark:text-white"
         >
           Bubbly
         </Link>
         {inRoom && sessionTitle ? (
-          <span className="ml-2 max-w-[160px] truncate text-sm text-slate-600 dark:text-slate-200/80 sm:max-w-xs">
+          <span className="ml-2 max-w-[160px] truncate text-sm text-white dark:text-slate-200/80 sm:max-w-xs">
             {sessionTitle}
           </span>
         ) : null}
       </div>
-      <div className="flex items-center gap-2">
+      <div className="flex items-center">
         {mounted && (
           <Button
             size="sm"
-            variant="ghost"
-            theme="brand"
+            variant="text"
+            theme="slate"
             className="h-9 w-9 p-0"
             onClick={() => setTheme(theme === "dark" ? "light" : "dark")}
           >
@@ -123,7 +123,7 @@ export function GlobalHeader() {
           <PopoverTrigger asChild>
             <Button
               size="sm"
-              variant="secondary"
+              variant="text"
               theme="slate"
               className="h-9 w-9 p-0"
             >
@@ -161,7 +161,7 @@ export function GlobalHeader() {
                   className="flex w-full items-center gap-2 rounded-md px-3 py-2 text-sm text-slate-900 hover:bg-slate-100 disabled:opacity-50 dark:text-slate-200 dark:hover:bg-slate-800"
                 >
                   <LogIn className="h-4 w-4" />
-                  로그인
+                  호스트 로그인
                 </button>
               </div>
             )}

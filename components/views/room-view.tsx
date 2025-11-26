@@ -13,7 +13,7 @@ import { useSessionState } from "@/hooks/useSessionState";
 import { deleteSession } from "@/lib/questions";
 import { useSessionStore } from "@/lib/stores/session-store";
 import type { Question } from "@/lib/types";
-import { cn } from "@/lib/utils";
+import { addVisitedSession, cn } from "@/lib/utils";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { useRouter } from "next/navigation";
 import { useEffect, useMemo, useState } from "react";
@@ -81,11 +81,26 @@ export function RoomView({ sessionCode }: RoomViewProps) {
   useEffect(() => {
     if (session?.title) {
       setSessionTitle(session.title);
+      // 방문한 방 정보를 localStorage에 저장
+      if (session.code && session.title) {
+        addVisitedSession({
+          code: session.code,
+          title: session.title,
+          createdAt: session.createdAt,
+          isActive: session.isActive,
+        });
+      }
     }
     return () => {
       setSessionTitle(null);
     };
-  }, [session?.title, setSessionTitle]);
+  }, [
+    session?.title,
+    session?.code,
+    session?.createdAt,
+    session?.isActive,
+    setSessionTitle,
+  ]);
 
   useEffect(() => {
     const key = `bubbly:reactions:${sessionCode}`;
@@ -173,41 +188,77 @@ export function RoomView({ sessionCode }: RoomViewProps) {
     [questions]
   );
 
-  const sortedApprovedQuestions = useMemo(() => {
-    const sorted = [...approvedQuestions];
+  // 날짜 문자열 추출 헬퍼 함수 (YYYY-MM-DD 형식)
+  const getDateString = (timestamp: number): string => {
+    const date = new Date(timestamp);
+    const year = date.getFullYear();
+    const month = String(date.getMonth() + 1).padStart(2, "0");
+    const day = String(date.getDate()).padStart(2, "0");
+    return `${year}-${month}-${day}`;
+  };
 
-    if (viewerSortTab === "latest") {
-      // 최신순: 생성일자만 기준으로 정렬
-      sorted.sort((a, b) => b.createdAt - a.createdAt);
-    } else {
-      // 좋아요순: 하이라이트된 질문을 최상단에 배치
-      const highlightedQuestion = sorted.find((q) => q.highlighted);
+  // 하이라이트 기반 정렬 함수
+  const sortQuestionsWithHighlight = (
+    questions: Question[],
+    sortType: "latest" | "popular"
+  ): Question[] => {
+    const highlightedQuestion = questions.find((q) => q.highlighted);
 
-      if (!highlightedQuestion) {
-        // 하이라이트된 질문이 없으면 좋아요순으로 정렬
-        sorted.sort((a, b) => b.like - a.like);
-        return sorted;
+    if (!highlightedQuestion) {
+      // 하이라이트된 질문이 없으면 일반 정렬
+      if (sortType === "latest") {
+        return [...questions].sort((a, b) => b.createdAt - a.createdAt);
+      } else {
+        return [...questions].sort((a, b) => b.like - a.like);
       }
-
-      // 하이라이트된 질문의 등록 시간 이후에 등록된 질문들
-      const afterHighlighted = sorted.filter(
-        (q) => !q.highlighted && q.createdAt > highlightedQuestion.createdAt
-      );
-
-      // 하이라이트된 질문 이전에 등록된 질문들
-      const beforeHighlighted = sorted.filter(
-        (q) => !q.highlighted && q.createdAt <= highlightedQuestion.createdAt
-      );
-
-      // 좋아요순으로 정렬
-      afterHighlighted.sort((a, b) => b.like - a.like);
-      beforeHighlighted.sort((a, b) => b.like - a.like);
-
-      // 하이라이트 이후 등록된 질문 → 하이라이트된 질문 → 나머지 순서로 배치
-      return [...afterHighlighted, highlightedQuestion, ...beforeHighlighted];
     }
 
-    return sorted;
+    const highlightedDate = getDateString(highlightedQuestion.createdAt);
+
+    // 같은 날짜에 생성된 질문들
+    const sameDateQuestions = questions.filter(
+      (q) => getDateString(q.createdAt) === highlightedDate
+    );
+
+    // 그 날짜 이후에 생성된 질문들 (하이라이트 여부와 관계없이)
+    const afterDateQuestions = questions.filter(
+      (q) => getDateString(q.createdAt) > highlightedDate
+    );
+
+    // 그 날짜 이전에 생성된 질문들
+    const beforeDateQuestions = questions.filter(
+      (q) => getDateString(q.createdAt) < highlightedDate
+    );
+
+    // 같은 날짜 내에서 정렬: 하이라이트된 질문이 맨 위, 나머지는 정렬 기준에 따라
+    const sortedSameDate = [...sameDateQuestions].sort((a, b) => {
+      if (a.highlighted) return -1;
+      if (b.highlighted) return 1;
+      if (sortType === "latest") {
+        return b.createdAt - a.createdAt;
+      } else {
+        return b.like - a.like;
+      }
+    });
+
+    // 이후 날짜 질문들 정렬
+    if (sortType === "latest") {
+      afterDateQuestions.sort((a, b) => b.createdAt - a.createdAt);
+      beforeDateQuestions.sort((a, b) => b.createdAt - a.createdAt);
+    } else {
+      afterDateQuestions.sort((a, b) => b.like - a.like);
+      beforeDateQuestions.sort((a, b) => b.like - a.like);
+    }
+
+    // 같은 날짜 질문들 → 이전 날짜 질문들 → 이후 날짜 질문들 순서
+    return [...sortedSameDate, ...beforeDateQuestions, ...afterDateQuestions];
+  };
+
+  const sortedApprovedQuestions = useMemo(() => {
+    return sortQuestionsWithHighlight(
+      approvedQuestions,
+      viewerSortTab === "latest" ? "latest" : "popular"
+    );
   }, [approvedQuestions, viewerSortTab]);
 
   const handleApprove = (id: string) => changeStatus(id, "approved");
@@ -284,6 +335,13 @@ export function RoomView({ sessionCode }: RoomViewProps) {
     }
   };
 
+  const copySessionCode = async () => {
+    if (typeof navigator !== "undefined" && navigator.clipboard) {
+      await navigator.clipboard.writeText(sessionCode);
+      toast.success("방 코드가 복사되었습니다!");
+    }
+  };
+
   if (!session) {
     return (
       <div className="flex h-full flex-col items-center justify-center gap-4 text-center text-slate-600 dark:text-slate-400">
@@ -354,30 +412,32 @@ export function RoomView({ sessionCode }: RoomViewProps) {
                 </div>
               ) : questions.length ? (
                 <div className="space-y-3">
-                  {questions.map((question: Question, index) => (
-                    <QuestionCard
-                      key={question.id}
-                      question={question}
-                      mode="host"
-                      index={index}
-                      userReaction={reactionMap[question.id] ?? null}
-                      onStatusChange={(status) => {
-                        if (status === "approved") {
-                          handleApprove(question.id);
-                        } else if (status === "archived") {
-                          handleReject(question.id);
+                  {sortQuestionsWithHighlight(questions, "latest").map(
+                    (question: Question, index) => (
+                      <QuestionCard
+                        key={question.id}
+                        question={question}
+                        mode="host"
+                        index={index}
+                        userReaction={reactionMap[question.id] ?? null}
+                        onStatusChange={(status) => {
+                          if (status === "approved") {
+                            handleApprove(question.id);
+                          } else if (status === "archived") {
+                            handleReject(question.id);
+                          }
+                        }}
+                        onReact={() => handleReaction(question.id)}
+                        onDelete={() => handleDeleteQuestion(question.id)}
+                        onHighlight={() =>
+                          handleHighlight(
+                            question.id,
+                            question.highlighted ?? false
+                          )
                         }
-                      }}
-                      onReact={() => handleReaction(question.id)}
-                      onDelete={() => handleDeleteQuestion(question.id)}
-                      onHighlight={() =>
-                        handleHighlight(
-                          question.id,
-                          question.highlighted ?? false
-                        )
-                      }
-                    />
-                  ))}
+                      />
+                    )
+                  )}
                 </div>
               ) : (
                 <div className="rounded-xl border border-dashed border-slate-300 p-6 text-center text-sm text-slate-600 dark:border-slate-800 dark:text-slate-400">
@@ -432,30 +492,32 @@ export function RoomView({ sessionCode }: RoomViewProps) {
                   <QuestionSkeleton />
                 </>
               ) : approvedQuestions.length ? (
-                approvedQuestions.map((question: Question, index) => (
-                  <QuestionCard
-                    key={question.id}
-                    question={question}
-                    mode="host"
-                    index={index}
-                    userReaction={reactionMap[question.id] ?? null}
-                    onStatusChange={(status) => {
-                      if (status === "approved") {
-                        handleApprove(question.id);
-                      } else if (status === "archived") {
-                        handleReject(question.id);
+                sortQuestionsWithHighlight(approvedQuestions, "latest").map(
+                  (question: Question, index) => (
+                    <QuestionCard
+                      key={question.id}
+                      question={question}
+                      mode="host"
+                      index={index}
+                      userReaction={reactionMap[question.id] ?? null}
+                      onStatusChange={(status) => {
+                        if (status === "approved") {
+                          handleApprove(question.id);
+                        } else if (status === "archived") {
+                          handleReject(question.id);
+                        }
+                      }}
+                      onReact={() => handleReaction(question.id)}
+                      onDelete={() => remove(question.id)}
+                      onHighlight={() =>
+                        handleHighlight(
+                          question.id,
+                          question.highlighted ?? false
+                        )
                       }
-                    }}
-                    onReact={() => handleReaction(question.id)}
-                    onDelete={() => remove(question.id)}
-                    onHighlight={() =>
-                      handleHighlight(
-                        question.id,
-                        question.highlighted ?? false
-                      )
-                    }
-                  />
-                ))
+                    />
+                  )
+                )
               ) : (
                 <div className="rounded-xl border border-dashed border-slate-300 p-6 text-center text-sm text-slate-600 dark:border-slate-800 dark:text-slate-400">
                   아직 공개된 질문이 없습니다.
@@ -577,6 +639,7 @@ export function RoomView({ sessionCode }: RoomViewProps) {
           onDeleteClick={() => setIsDeleteConfirmOpen(true)}
           shareCopied={shareCopied}
           onShareClick={copyShareUrl}
+          onCodeClick={copySessionCode}
         />
       )}
 

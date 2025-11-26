@@ -5,9 +5,10 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { useHostSessions } from "@/hooks/useHostSessions";
 import { useSessionStore } from "@/lib/stores/session-store";
+import { getVisitedSessions, type VisitedSession } from "@/lib/utils";
 import { ArrowRight, CalendarClock, KeyRound } from "lucide-react";
 import { useRouter } from "next/navigation";
-import { Suspense, useState } from "react";
+import { Suspense, useEffect, useState } from "react";
 import { toast } from "sonner";
 
 export function HomeView() {
@@ -16,6 +17,32 @@ export function HomeView() {
     user: state.user,
   }));
   const [joinCode, setJoinCode] = useState("");
+  const [visitedSessions, setVisitedSessions] = useState<VisitedSession[]>([]);
+
+  useEffect(() => {
+    // 컴포넌트 마운트 시 방문한 방 목록 로드
+    setVisitedSessions(getVisitedSessions());
+
+    // localStorage 변경 감지 (다른 탭에서 추가된 경우)
+    const handleStorageChange = () => {
+      setVisitedSessions(getVisitedSessions());
+    };
+    window.addEventListener("storage", handleStorageChange);
+
+    // 같은 탭에서의 변경 감지를 위한 커스텀 이벤트
+    window.addEventListener(
+      "bubbly:visited-sessions-updated",
+      handleStorageChange
+    );
+
+    return () => {
+      window.removeEventListener("storage", handleStorageChange);
+      window.removeEventListener(
+        "bubbly:visited-sessions-updated",
+        handleStorageChange
+      );
+    };
+  }, []);
 
   const handleJoin = (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
@@ -28,7 +55,7 @@ export function HomeView() {
   };
 
   return (
-    <div className="mx-auto flex h-full overflow-y-auto items-center justify-center w-full max-w-lg flex-col gap-10 px-4">
+    <div className="mx-auto flex h-full overflow-y-auto items-center justify-center w-full max-w-lg flex-col gap-6 px-4">
       <section className="grid gap-6 w-full">
         <div className="space-y-4 rounded-2xl border border-brand/60 bg-brand/10 p-6 dark:border-slate-800 dark:bg-slate-950/60">
           <div className="flex items-center gap-2 text-slate-900 dark:text-slate-200">
@@ -62,7 +89,7 @@ export function HomeView() {
       </section>
 
       {user ? (
-        <section className="space-y-2 w-full">
+        <section className="flex flex-col gap-2 w-full">
           <h2 className="text-xl font-semibold text-slate-900 dark:text-white pl-1">
             내가 만든 방
           </h2>
@@ -71,6 +98,24 @@ export function HomeView() {
           </Suspense>
         </section>
       ) : null}
+
+      {user ? (
+        <Suspense fallback={null}>
+          <VisitedSessionsSection
+            user={user}
+            visitedSessions={visitedSessions}
+          />
+        </Suspense>
+      ) : (
+        visitedSessions.length > 0 && (
+          <section className="flex flex-col gap-2 w-full">
+            <h2 className="text-xl font-semibold text-slate-900 dark:text-white pl-1">
+              방문한 방
+            </h2>
+            <VisitedSessionsList sessions={visitedSessions} />
+          </section>
+        )
+      )}
     </div>
   );
 }
@@ -79,7 +124,11 @@ function HostSessionsList({ hostUid }: { hostUid: string }) {
   const router = useRouter();
   const { sessions, isFetching } = useHostSessions(hostUid);
 
-  if (!sessions.length && !isFetching) {
+  if (isFetching) {
+    return <HostSessionsSkeleton />;
+  }
+
+  if (!sessions.length) {
     return (
       <div className="rounded-xl border border-slate-200 bg-white p-6 text-sm text-slate-700 dark:border-slate-800 dark:bg-slate-950/60 dark:text-slate-300">
         아직 만든 방이 없습니다. 새로운 Q&A 방을 만들어보세요!
@@ -89,41 +138,37 @@ function HostSessionsList({ hostUid }: { hostUid: string }) {
 
   return (
     <div className="space-y-3">
-      {isFetching && !sessions.length ? (
-        <HostSessionsSkeleton />
-      ) : (
-        sessions.map((session) => (
-          <div
-            key={session.code}
-            className="flex flex-col justify-between gap-3 rounded-xl border border-slate-200 bg-white p-4 sm:flex-row sm:items-center dark:border-slate-800 dark:bg-slate-950/60"
-          >
-            <div>
-              <div className="text-lg font-semibold text-slate-900 dark:text-white">
-                {session.title}
-              </div>
-              <div className="mt-1 text-xs text-slate-600 dark:text-slate-500">
-                코드: {session.code}
-              </div>
-              <div className="flex items-center gap-2 text-sm text-slate-600 dark:text-slate-400">
-                <CalendarClock className="h-4 w-4" />
-                <span>
-                  {new Date(session.createdAt).toLocaleString("ko-KR", {
-                    dateStyle: "medium",
-                    timeStyle: "short",
-                  })}
-                </span>
-                <SessionStatusBadge isActive={session.isActive} />
-              </div>
+      {sessions.map((session) => (
+        <div
+          key={session.code}
+          className="flex flex-col justify-between gap-3 rounded-xl border border-slate-200 bg-white p-4 sm:flex-row sm:items-center dark:border-slate-800 dark:bg-slate-950/60"
+        >
+          <div>
+            <div className="text-lg font-semibold text-slate-900 dark:text-white">
+              {session.title}
             </div>
-            <Button
-              variant="secondary"
-              onClick={() => router.push(`/room/${session.code}`)}
-            >
-              방으로 이동
-            </Button>
+            <div className="mt-1 text-xs text-slate-600 dark:text-slate-500">
+              코드: {session.code}
+            </div>
+            <div className="flex items-center gap-2 text-sm text-slate-600 dark:text-slate-400">
+              <CalendarClock className="h-4 w-4" />
+              <span>
+                {new Date(session.createdAt).toLocaleString("ko-KR", {
+                  dateStyle: "medium",
+                  timeStyle: "short",
+                })}
+              </span>
+              <SessionStatusBadge isActive={session.isActive} />
+            </div>
           </div>
-        ))
-      )}
+          <Button
+            variant="secondary"
+            onClick={() => router.push(`/room/${session.code}`)}
+          >
+            방으로 이동
+          </Button>
+        </div>
+      ))}
     </div>
   );
 }
@@ -136,6 +181,79 @@ function HostSessionsSkeleton() {
           key={index}
           className="h-20 animate-pulse rounded-xl border border-slate-200 bg-slate-100 dark:border-slate-800 dark:bg-slate-900/40"
         />
+      ))}
+    </div>
+  );
+}
+
+function VisitedSessionsSection({
+  user,
+  visitedSessions,
+}: {
+  user: { uid: string } | null;
+  visitedSessions: VisitedSession[];
+}) {
+  const { sessions: hostSessions } = user
+    ? useHostSessions(user.uid)
+    : { sessions: [] };
+
+  // 호스트가 만든 방 코드 목록
+  const hostSessionCodes = new Set(hostSessions.map((s) => s.code));
+
+  // 호스트가 만든 방을 제외한 방문한 방 목록
+  const otherVisitedSessions = visitedSessions.filter(
+    (s) => !hostSessionCodes.has(s.code)
+  );
+
+  if (otherVisitedSessions.length === 0) {
+    return null;
+  }
+
+  return (
+    <section className="flex flex-col gap-2 w-full">
+      <h2 className="text-xl font-semibold text-slate-900 dark:text-white pl-1">
+        방문한 방
+      </h2>
+      <VisitedSessionsList sessions={otherVisitedSessions} />
+    </section>
+  );
+}
+
+function VisitedSessionsList({ sessions }: { sessions: VisitedSession[] }) {
+  const router = useRouter();
+
+  return (
+    <div className="space-y-3">
+      {sessions.map((session) => (
+        <div
+          key={session.code}
+          className="flex flex-col justify-between gap-3 rounded-xl border border-slate-200 bg-white p-4 sm:flex-row sm:items-center dark:border-slate-800 dark:bg-slate-950/60"
+        >
+          <div>
+            <div className="text-lg font-semibold text-slate-900 dark:text-white">
+              {session.title}
+            </div>
+            <div className="mt-1 text-xs text-slate-600 dark:text-slate-500">
+              코드: {session.code}
+            </div>
+            <div className="flex items-center gap-2 text-sm text-slate-600 dark:text-slate-400">
+              <CalendarClock className="h-4 w-4" />
+              <span>
+                {new Date(session.lastVisitedAt).toLocaleString("ko-KR", {
+                  dateStyle: "medium",
+                  timeStyle: "short",
+                })}
+              </span>
+              <SessionStatusBadge isActive={session.isActive} />
+            </div>
+          </div>
+          <Button
+            variant="secondary"
+            onClick={() => router.push(`/room/${session.code}`)}
+          >
+            방으로 이동
+          </Button>
+        </div>
       ))}
     </div>
   );

@@ -21,6 +21,7 @@ interface RoomDrawerProps {
   onDeleteClick: () => void;
   shareCopied: boolean;
   onShareClick: () => void;
+  onCodeClick: () => void;
 }
 
 export function RoomDrawer({
@@ -32,6 +33,7 @@ export function RoomDrawer({
   onDeleteClick,
   shareCopied,
   onShareClick,
+  onCodeClick,
 }: RoomDrawerProps) {
   const { user } = useSessionStore((state) => ({
     user: state.user,
@@ -110,7 +112,18 @@ export function RoomDrawer({
               방 코드
             </span>
             <div className="mt-1 flex items-center justify-between rounded-lg border border-slate-200 bg-slate-50 px-3 py-2 dark:border-slate-800 dark:bg-slate-900">
-              <span className="font-mono text-base text-slate-900 dark:text-white">
+              <span
+                className="font-mono text-base text-slate-900 dark:text-white cursor-pointer hover:text-slate-600 dark:hover:text-slate-300 transition-colors"
+                onClick={onCodeClick}
+                role="button"
+                tabIndex={0}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter" || e.key === " ") {
+                    e.preventDefault();
+                    onCodeClick();
+                  }
+                }}
+              >
                 {sessionCode}
               </span>
               <Button variant="outline" size="sm" onClick={onShareClick}>
