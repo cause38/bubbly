@@ -509,7 +509,7 @@ export function RoomView({ sessionCode }: RoomViewProps) {
                       }
                     }}
                     onReact={() => handleReaction(question.id)}
-                    onDelete={() => remove(question.id)}
+                    onDelete={() => handleDeleteQuestion(question.id)}
                     onHighlight={() =>
                       handleHighlight(
                         question.id,
@@ -549,7 +549,7 @@ export function RoomView({ sessionCode }: RoomViewProps) {
                         }
                       }}
                       onReact={() => handleReaction(question.id)}
-                      onDelete={() => remove(question.id)}
+                      onDelete={() => handleDeleteQuestion(question.id)}
                       onHighlight={() =>
                         handleHighlight(
                           question.id,

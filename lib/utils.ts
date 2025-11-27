@@ -170,28 +170,25 @@ export function addVisitedSession(session: {
 
 // iOS 포함 모든 플랫폼에서 작동하는 복사 함수
 export async function copyToClipboard(text: string): Promise<boolean> {
-  if (typeof window === "undefined") return false;
-
-  const isIOS = /ipad|iphone|ipod/i.test(navigator.userAgent);
-
-  // iOS에서는 fallback을 바로 사용 (더 안정적)
-  if (isIOS || !navigator.clipboard) {
-    return fallbackCopyToClipboard(text);
+  if (typeof window === "undefined" || typeof navigator === "undefined") {
+    return false;
   }
 
-  try {
-    // Modern clipboard API 시도
-    if (navigator.clipboard && navigator.clipboard.writeText) {
+  const canUseModernClipboard =
+    typeof navigator.clipboard !== "undefined" &&
+    typeof navigator.clipboard.writeText === "function" &&
+    window.isSecureContext;
+
+  if (canUseModernClipboard) {
+    try {
       await navigator.clipboard.writeText(text);
       return true;
+    } catch (error) {
+      console.warn("Clipboard API failed, falling back to legacy copy.", error);
     }
-  } catch (error) {
-    // Clipboard API 실패 시 fallback 사용
-    console.warn("Clipboard API failed, trying fallback:", error);
-    return fallbackCopyToClipboard(text);
   }
 
-  return false;
+  return fallbackCopyToClipboard(text);
 }
 
 // Fallback 복사 함수 (iOS 호환)
@@ -207,8 +204,10 @@ function fallbackCopyToClipboard(text: string): boolean {
     textarea.style.opacity = "0";
     document.body.appendChild(textarea);
 
-    // iOS에서는 focus와 select를 먼저 호출
-    if (/ipad|iphone|ipod/i.test(navigator.userAgent)) {
+    const isIOS = /ipad|iphone|ipod/i.test(navigator.userAgent);
+
+    // iOS에서는 selection 방식을 다르게 처리
+    if (isIOS) {
       textarea.contentEditable = "true";
       textarea.readOnly = false;
       const range = document.createRange();
@@ -223,6 +222,7 @@ function fallbackCopyToClipboard(text: string): boolean {
     } else {
       textarea.focus();
       textarea.select();
+      textarea.setSelectionRange(0, textarea.value.length);
     }
 
     const successful = document.execCommand("copy");

@@ -93,10 +93,13 @@ export function QuestionForm({ sessionCode, disabled }: QuestionFormProps) {
     }
   };
 
+  const isPending = mutation.isPending;
   const trimmedContent = content.replace(/\s+/g, " ").trim();
   const canSubmit = trimmedContent.length > 0;
 
   const handleSubmit = () => {
+    if (isPending) return;
+
     if (!canSubmit) {
       toast.error("질문 내용을 입력해주세요.");
       return;
@@ -104,8 +107,6 @@ export function QuestionForm({ sessionCode, disabled }: QuestionFormProps) {
 
     mutation.mutate({ content: trimmedContent });
   };
-
-  const isPending = mutation.isPending;
 
   return (
     <form
@@ -126,7 +127,7 @@ export function QuestionForm({ sessionCode, disabled }: QuestionFormProps) {
           onKeyDown={(e) => {
             if (e.key === "Enter" && !e.shiftKey) {
               e.preventDefault();
-              handleSubmit();
+              e.currentTarget.form?.requestSubmit();
             }
           }}
         />
