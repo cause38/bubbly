@@ -25,6 +25,7 @@ const MAX_LENGTH = 150;
 
 export function QuestionForm({ sessionCode, disabled }: QuestionFormProps) {
   const [content, setContent] = useState("");
+  const [isComposing, setIsComposing] = useState(false);
   const queryClient = useQueryClient();
 
   const mutation = useMutation<
@@ -98,7 +99,7 @@ export function QuestionForm({ sessionCode, disabled }: QuestionFormProps) {
   const canSubmit = trimmedContent.length > 0;
 
   const handleSubmit = () => {
-    if (isPending) return;
+    if (isPending || isComposing) return;
 
     if (!canSubmit) {
       toast.error("질문 내용을 입력해주세요.");
@@ -121,11 +122,16 @@ export function QuestionForm({ sessionCode, disabled }: QuestionFormProps) {
           placeholder="질문 내용을 입력하세요"
           value={content}
           onChange={handleChange}
+          onCompositionStart={() => setIsComposing(true)}
+          onCompositionEnd={() => setIsComposing(false)}
           disabled={disabled || isPending}
           maxLength={MAX_LENGTH}
           className="min-h-[24px] h-[24px] focus:min-h-[120px] transition-[min-height] text-base pr-12 pb-6"
           onKeyDown={(e) => {
             if (e.key === "Enter" && !e.shiftKey) {
+              if (isComposing) {
+                return;
+              }
               e.preventDefault();
               e.currentTarget.form?.requestSubmit();
             }
