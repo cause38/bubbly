@@ -55,36 +55,36 @@ export function QuestionCard({
         animationDelay: `${Math.min(index, 10) * 70}ms`,
       }}
     >
-      <div className="flex items-start justify-between gap-4">
-        <div className="flex flex-col gap-2">
+      <div className="flex flex-col gap-2">
+        <div className="flex items-start justify-between gap-2">
           <div className="flex items-center gap-2 text-xs text-slate-600 dark:text-slate-400">
             <User className="h-3.5 w-3.5" />
             <span>{question.authorName || "익명"}</span>
             <span>•</span>
             <span>{timeAgo}</span>
           </div>
-          <p className="whitespace-pre-wrap text-base leading-relaxed text-slate-900 dark:text-slate-100">
-            {question.content}
-          </p>
+          {question.status !== "pending" && (
+            <button
+              type="button"
+              className={cn(
+                "flex items-center gap-1 rounded-full border px-2 py-1 transition lg:hover:scale-105 disabled:cursor-not-allowed disabled:opacity-50",
+                userReaction === "like"
+                  ? "border-brand bg-brand/10 text-brand"
+                  : "border-slate-300 bg-slate-50 lg:hover:border-brand lg:hover:text-brand dark:border-white/10 dark:bg-white/10"
+              )}
+              onClick={() => canReact && onReact()}
+              disabled={!canReact}
+            >
+              <ThumbsUp className="h-4 w-4" />
+              <span className="text-[10px] font-semibold text-slate-700 dark:text-slate-200">
+                {question.like}
+              </span>
+            </button>
+          )}
         </div>
-        {question.status !== "pending" && (
-          <button
-            type="button"
-            className={cn(
-              "flex items-center gap-1 rounded-full border px-2 py-1 transition hover:scale-105 disabled:cursor-not-allowed disabled:opacity-50",
-              userReaction === "like"
-                ? "border-brand bg-brand/10 text-brand"
-                : "border-slate-300 bg-slate-50 hover:border-brand hover:text-brand dark:border-white/10 dark:bg-white/10"
-            )}
-            onClick={() => canReact && onReact()}
-            disabled={!canReact}
-          >
-            <ThumbsUp className="h-4 w-4" />
-            <span className="text-[10px] font-semibold text-slate-700 dark:text-slate-200">
-              {question.like}
-            </span>
-          </button>
-        )}
+        <p className="whitespace-pre-wrap text-base leading-relaxed text-slate-900 dark:text-slate-100">
+          {question.content}
+        </p>
       </div>
 
       {mode === "host" ? (

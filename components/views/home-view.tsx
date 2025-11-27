@@ -222,9 +222,12 @@ function VisitedSessionsSection({
 function VisitedSessionsList({ sessions }: { sessions: VisitedSession[] }) {
   const router = useRouter();
 
+  // 최대 2개까지만 표시
+  const displayedSessions = sessions.slice(0, 2);
+
   return (
     <div className="space-y-3">
-      {sessions.map((session) => (
+      {displayedSessions.map((session) => (
         <div
           key={session.code}
           className="flex flex-col justify-between gap-3 rounded-xl border border-slate-200 bg-white p-4 sm:flex-row sm:items-center dark:border-slate-800 dark:bg-slate-950/60"

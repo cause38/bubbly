@@ -10,7 +10,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { RoomViewSkeleton } from "@/components/views/room-view-skeleton";
 import { useQuestions } from "@/hooks/useQuestions";
 import { useSessionState } from "@/hooks/useSessionState";
-import { deleteSession } from "@/lib/questions";
+import { deleteComment, deleteSession } from "@/lib/questions";
 import { useSessionStore } from "@/lib/stores/session-store";
 import type { Question } from "@/lib/types";
 import { addVisitedSession, cn, copyToClipboard } from "@/lib/utils";
@@ -69,6 +69,12 @@ export function RoomView({ sessionCode }: RoomViewProps) {
   const [isDeleteQuestionConfirmOpen, setIsDeleteQuestionConfirmOpen] =
     useState(false);
   const [questionToDelete, setQuestionToDelete] = useState<string | null>(null);
+  const [isDeleteCommentConfirmOpen, setIsDeleteCommentConfirmOpen] =
+    useState(false);
+  const [commentToDelete, setCommentToDelete] = useState<{
+    questionId: string;
+    commentId: string;
+  } | null>(null);
 
   useEffect(() => {
     setIsStoreReady(true);
@@ -311,6 +317,40 @@ export function RoomView({ sessionCode }: RoomViewProps) {
       remove(questionToDelete);
       setIsDeleteQuestionConfirmOpen(false);
       setQuestionToDelete(null);
+    }
+  };
+
+  const deleteCommentMutation = useMutation<
+    void,
+    unknown,
+    { questionId: string; commentId: string }
+  >({
+    mutationFn: async ({
+      questionId,
+      commentId,
+    }: {
+      questionId: string;
+      commentId: string;
+    }) => {
+      await deleteComment(questionId, commentId, sessionCode);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["questions", sessionCode] });
+      toast.success("댓글이 삭제되었습니다.");
+      setIsDeleteCommentConfirmOpen(false);
+      setCommentToDelete(null);
+    },
+    onError: () => {
+      toast.error("댓글 삭제에 실패했습니다.");
+    },
+  });
+
+  const confirmDeleteComment = () => {
+    if (commentToDelete) {
+      deleteCommentMutation.mutate({
+        questionId: commentToDelete.questionId,
+        commentId: commentToDelete.commentId,
+      });
     }
   };
 
@@ -682,6 +722,22 @@ export function RoomView({ sessionCode }: RoomViewProps) {
             cancelText="취소"
             variant="destructive"
             onConfirm={confirmDeleteQuestion}
+          />
+          <ConfirmDialog
+            open={isDeleteCommentConfirmOpen}
+            onOpenChange={(open) => {
+              setIsDeleteCommentConfirmOpen(open);
+              if (!open) {
+                setCommentToDelete(null);
+              }
+            }}
+            title="댓글 삭제 확인"
+            description="이 댓글을 삭제하면 다시 되돌릴 수 없습니다.<br/>정말로 이 댓글을 삭제하시겠습니까?"
+            confirmText="삭제"
+            cancelText="취소"
+            variant="destructive"
+            onConfirm={confirmDeleteComment}
+            isLoading={deleteCommentMutation.isPending}
           />
         </>
       )}

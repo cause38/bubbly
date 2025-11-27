@@ -204,10 +204,28 @@ export async function updateSession(
     endDate?: number;
   }
 ) {
+  // 기존 세션 정보 가져오기
+  const existingMetadata = await readItem<SessionState>(
+    `${getSessionPath(sessionCode)}/metadata`
+  );
+
+  if (existingMetadata) {
+    // Firebase 보안 규칙: 기존 세션의 startDate와 endDate는 변경할 수 없음
+    if (updates.startDate !== undefined && updates.startDate !== existingMetadata.startDate) {
+      throw new Error("시작 날짜는 변경할 수 없습니다.");
+    }
+    if (updates.endDate !== undefined && updates.endDate !== existingMetadata.endDate) {
+      throw new Error("종료 날짜는 변경할 수 없습니다.");
+    }
+  }
+
   const updateData: Partial<SessionState> = {};
   if (updates.title !== undefined) updateData.title = updates.title;
-  if (updates.startDate !== undefined) updateData.startDate = updates.startDate;
-  if (updates.endDate !== undefined) updateData.endDate = updates.endDate;
+  // 기존 세션이 있으면 startDate와 endDate는 전달하지 않음 (변경 불가)
+  if (!existingMetadata) {
+    if (updates.startDate !== undefined) updateData.startDate = updates.startDate;
+    if (updates.endDate !== undefined) updateData.endDate = updates.endDate;
+  }
 
   await updateItem(`${getSessionPath(sessionCode)}/metadata`, updateData);
 
@@ -367,4 +385,14 @@ export async function addComment(
     comment
   );
   return comment;
+}
+
+export async function deleteComment(
+  questionId: string,
+  commentId: string,
+  sessionCode: string
+) {
+  await deleteItem(
+    `${getQuestionPath(questionId, sessionCode)}/comments/${commentId}`
+  );
 }

@@ -55,6 +55,13 @@ export function CreateSessionModal({
       if (start > end) {
         throw new Error("시작 날짜가 종료 날짜보다 늦을 수 없습니다.");
       }
+      // Firebase 보안 규칙: endDate는 startDate로부터 7일을 초과할 수 없음
+      const maxEndDate = start + 1000 * 60 * 60 * 24 * 7; // 7일 (밀리초)
+      if (end > maxEndDate) {
+        throw new Error(
+          "종료 날짜는 시작 날짜로부터 최대 7일까지만 설정할 수 있습니다."
+        );
+      }
       return createSession(
         {
           uid: user.uid,
@@ -91,6 +98,24 @@ export function CreateSessionModal({
     }
     if (!title.trim()) {
       toast.error("세션 제목을 입력해주세요.");
+      return;
+    }
+    if (!startDate || !endDate) {
+      toast.error("시작 날짜와 종료 날짜는 필수입니다.");
+      return;
+    }
+    const start = new Date(startDate).setHours(0, 0, 0, 0);
+    const end = new Date(endDate).setHours(23, 59, 59, 999);
+    if (start > end) {
+      toast.error("시작 날짜가 종료 날짜보다 늦을 수 없습니다.");
+      return;
+    }
+    // Firebase 보안 규칙: endDate는 startDate로부터 7일을 초과할 수 없음
+    const maxEndDate = start + 1000 * 60 * 60 * 24 * 7; // 7일 (밀리초)
+    if (end > maxEndDate) {
+      toast.error(
+        "종료 날짜는 시작 날짜로부터 최대 7일까지만 설정할 수 있습니다."
+      );
       return;
     }
     createSessionMutation.mutate();

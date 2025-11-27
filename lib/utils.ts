@@ -153,8 +153,8 @@ export function addVisitedSession(session: {
     // 최근 방문 순으로 정렬
     visitedSessions.sort((a, b) => b.lastVisitedAt - a.lastVisitedAt);
 
-    // 최대 50개만 유지
-    const limitedSessions = visitedSessions.slice(0, 50);
+    // 최대 2개만 유지
+    const limitedSessions = visitedSessions.slice(0, 2);
 
     window.localStorage.setItem(
       VISITED_SESSIONS_KEY,

@@ -64,19 +64,10 @@ export function EditSessionModal({
 
   const updateSessionMutation = useMutation({
     mutationFn: async () => {
-      const start = editStartDate
-        ? new Date(editStartDate).setHours(0, 0, 0, 0)
-        : undefined;
-      const end = editEndDate
-        ? new Date(editEndDate).setHours(23, 59, 59, 999)
-        : undefined;
-      if (start && end && start > end) {
-        throw new Error("시작 날짜가 종료 날짜보다 늦을 수 없습니다.");
-      }
+      // Firebase 보안 규칙: 기존 세션의 startDate와 endDate는 변경할 수 없음
+      // title만 수정 가능
       return updateSession(sessionCode, {
         title: editTitle.trim(),
-        startDate: start,
-        endDate: end,
       });
     },
     onSuccess: (updatedSession: { title?: string } | undefined) => {
