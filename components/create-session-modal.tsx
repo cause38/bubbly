@@ -109,8 +109,8 @@ export function CreateSessionModal({
         <DialogHeader>
           <DialogTitle>새 방 만들기</DialogTitle>
           <DialogDescription>
-            방을 생성한 진행자는 자동으로 방장으로 지정되며, 이후 해당
-            계정으로만 질문 승인 및 반려가 가능합니다.
+            방을 생성한 진행자는 자동으로 방장으로 지정되며, <br />
+            이후 해당 계정으로만 질문 승인 및 반려가 가능합니다.
           </DialogDescription>
         </DialogHeader>
         <div className="space-y-4 py-4">
@@ -152,4 +152,3 @@ export function CreateSessionModal({
     </Dialog>
   );
 }
-

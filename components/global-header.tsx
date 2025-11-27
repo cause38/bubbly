@@ -77,7 +77,7 @@ export function GlobalHeader() {
   };
 
   return (
-    <header className="sticky top-0 z-50 flex items-center justify-between border-b border-slate-200 bg-brand/80 px-4 py-3 backdrop-blur-xl dark:border-white/10 dark:bg-black/40">
+    <header className="sticky top-0 z-50 flex items-center justify-between border-b border-slate-200 bg-brand px-4 py-3 backdrop-blur-xl dark:border-white/10 dark:bg-black/40">
       <div className="flex items-center gap-3">
         {inRoom && (
           <Button

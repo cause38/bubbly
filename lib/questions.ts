@@ -214,28 +214,17 @@ export async function updateSession(
   const metadata = await readItem<SessionState>(
     `${getSessionPath(sessionCode)}/metadata`
   );
-  if (metadata?.hostUid) {
-    await updateItem(
-      `${getHostSessionsPath(metadata.hostUid)}/${sessionCode}`,
-      updateData
-    );
-  }
+
   return metadata;
 }
 
 export async function deleteSession(sessionCode: string, hostUid: string) {
   // 세션 전체 삭제 (질문들도 함께 삭제됨)
   await deleteItem(getSessionPath(sessionCode));
-  // 호스트 세션 목록에서도 삭제
-  await deleteItem(`${getHostSessionsPath(hostUid)}/${sessionCode}`);
 }
 
 export async function createSessionMetadata(session: SessionState) {
   await setItem(`${getSessionPath(session.code)}/metadata`, session);
-  await setItem(
-    `${getHostSessionsPath(session.hostUid)}/${session.code}`,
-    session
-  );
 }
 
 export function generateSessionCode(length = 6) {

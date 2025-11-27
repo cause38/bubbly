@@ -1,8 +1,67 @@
 import { clsx, type ClassValue } from "clsx";
+import type { Metadata } from "next";
 import { twMerge } from "tailwind-merge";
 
 export function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs));
+}
+
+// 앱 관련 상수
+export const APP_NAME = "Bubbly";
+
+// 메타데이터 관련 상수 및 유틸리티
+export const getSiteUrl = () => {
+  return process.env.NEXT_PUBLIC_SITE_URL || "";
+};
+
+export const getOgImageUrl = () => {
+  return `${getSiteUrl()}/og-image.png`;
+};
+
+// 기본 OG 이미지 설정
+export const getDefaultOgImage = (alt?: string) => ({
+  url: getOgImageUrl(),
+  width: 1200,
+  height: 630,
+  alt: alt || `${APP_NAME} 실시간 Q&A 세션`,
+  type: "image/png" as const,
+});
+
+// 공통 메타데이터 생성 함수
+export function createMetadata({
+  title,
+  description,
+  url,
+  ogImageAlt,
+}: {
+  title: string;
+  description: string;
+  url?: string;
+  ogImageAlt?: string;
+}): Metadata {
+  const siteUrl = getSiteUrl();
+  const ogImage = getDefaultOgImage(ogImageAlt);
+
+  return {
+    metadataBase: new URL(siteUrl),
+    title,
+    description,
+    openGraph: {
+      title,
+      description,
+      url: url || "/",
+      siteName: APP_NAME,
+      locale: "ko_KR",
+      type: "website",
+      images: [ogImage],
+    },
+    twitter: {
+      card: "summary_large_image",
+      title,
+      description,
+      images: [ogImage.url],
+    },
+  };
 }
 
 const adjectives = [
@@ -15,7 +74,7 @@ const adjectives = [
   "즐거운",
   "따뜻한",
   "산뜻한",
-  "유쾌한"
+  "유쾌한",
 ];
 
 const nouns = [
@@ -28,7 +87,7 @@ const nouns = [
   "노을",
   "하모니",
   "파도",
-  "반딧불"
+  "반딧불",
 ];
 
 export function generateNickname() {
@@ -52,7 +111,7 @@ const VISITED_SESSIONS_KEY = "bubbly:visited-sessions";
 // 방문한 방 목록 가져오기
 export function getVisitedSessions(): VisitedSession[] {
   if (typeof window === "undefined") return [];
-  
+
   try {
     const stored = window.localStorage.getItem(VISITED_SESSIONS_KEY);
     if (!stored) return [];
@@ -71,18 +130,18 @@ export function addVisitedSession(session: {
   isActive: boolean;
 }): void {
   if (typeof window === "undefined") return;
-  
+
   try {
     const visitedSessions = getVisitedSessions();
     const existingIndex = visitedSessions.findIndex(
       (s) => s.code === session.code
     );
-    
+
     const visitedSession: VisitedSession = {
       ...session,
       lastVisitedAt: Date.now(),
     };
-    
+
     if (existingIndex >= 0) {
       // 기존 방문 기록 업데이트
       visitedSessions[existingIndex] = visitedSession;
@@ -90,18 +149,18 @@ export function addVisitedSession(session: {
       // 새로운 방문 기록 추가
       visitedSessions.unshift(visitedSession);
     }
-    
+
     // 최근 방문 순으로 정렬
     visitedSessions.sort((a, b) => b.lastVisitedAt - a.lastVisitedAt);
-    
+
     // 최대 50개만 유지
     const limitedSessions = visitedSessions.slice(0, 50);
-    
+
     window.localStorage.setItem(
       VISITED_SESSIONS_KEY,
       JSON.stringify(limitedSessions)
     );
-    
+
     // 같은 탭에서 변경 감지를 위한 커스텀 이벤트 발생
     window.dispatchEvent(new Event("bubbly:visited-sessions-updated"));
   } catch (error) {
@@ -174,4 +233,3 @@ function fallbackCopyToClipboard(text: string): boolean {
     return false;
   }
 }
-

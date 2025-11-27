@@ -1,7 +1,7 @@
 "use client";
 
-import { useMemo, useEffect } from "react";
 import { Input } from "@/components/ui/input";
+import { useEffect, useMemo } from "react";
 
 interface SessionTitleInputProps {
   value: string;
@@ -18,7 +18,9 @@ export function SessionTitleInput({
 }: SessionTitleInputProps) {
   return (
     <div className="space-y-2">
-      <label className="text-sm font-medium text-slate-900 dark:text-slate-200">방 이름</label>
+      <label className="text-sm font-medium text-slate-900 dark:text-slate-200">
+        방 이름
+      </label>
       <Input
         value={value}
         onChange={(e) => onChange(e.target.value)}
@@ -74,22 +76,45 @@ export function DateRangeInputs({
     }
   }, [startDate, defaultStartDate, todayStr, onStartDateChange, readOnly]);
 
+  // 시작 날짜가 설정되었을 때 종료 날짜가 없으면 다음날로 설정
+  useEffect(() => {
+    if (startDate && !endDate && !readOnly) {
+      const nextDay = new Date(startDate);
+      nextDay.setDate(nextDay.getDate() + 1);
+      const nextDayStr = `${nextDay.getFullYear()}-${String(
+        nextDay.getMonth() + 1
+      ).padStart(2, "0")}-${String(nextDay.getDate()).padStart(2, "0")}`;
+      onEndDateChange(nextDayStr);
+    }
+  }, [startDate, endDate, onEndDateChange, readOnly]);
+
   const handleStartDateChange = (value: string) => {
     if (readOnly) return;
     onStartDateChange(value);
-    // 시작 날짜 변경 시 종료 날짜가 범위를 벗어나면 조정
-    if (endDate && value) {
+    // 시작 날짜 변경 시 종료 날짜가 없거나 범위를 벗어나면 조정
+    if (value) {
       const newStart = new Date(value);
-      const newEnd = new Date(endDate);
-      const maxEnd = new Date(newStart);
-      maxEnd.setDate(maxEnd.getDate() + 7);
-      if (newEnd > maxEnd || newEnd < newStart) {
-        const defaultEnd = new Date(newStart);
-        defaultEnd.setDate(defaultEnd.getDate() + 7);
-        const defaultEndStr = `${defaultEnd.getFullYear()}-${String(
-          defaultEnd.getMonth() + 1
-        ).padStart(2, "0")}-${String(defaultEnd.getDate()).padStart(2, "0")}`;
-        onEndDateChange(defaultEndStr);
+      if (!endDate) {
+        // 종료 날짜가 없으면 다음날로 설정
+        const nextDay = new Date(newStart);
+        nextDay.setDate(nextDay.getDate() + 1);
+        const nextDayStr = `${nextDay.getFullYear()}-${String(
+          nextDay.getMonth() + 1
+        ).padStart(2, "0")}-${String(nextDay.getDate()).padStart(2, "0")}`;
+        onEndDateChange(nextDayStr);
+      } else {
+        // 종료 날짜가 범위를 벗어나면 조정
+        const newEnd = new Date(endDate);
+        const maxEnd = new Date(newStart);
+        maxEnd.setDate(maxEnd.getDate() + 1);
+        if (newEnd > maxEnd || newEnd < newStart) {
+          const defaultEnd = new Date(newStart);
+          defaultEnd.setDate(defaultEnd.getDate() + 1);
+          const defaultEndStr = `${defaultEnd.getFullYear()}-${String(
+            defaultEnd.getMonth() + 1
+          ).padStart(2, "0")}-${String(defaultEnd.getDate()).padStart(2, "0")}`;
+          onEndDateChange(defaultEndStr);
+        }
       }
     }
   };
@@ -109,7 +134,10 @@ export function DateRangeInputs({
       <div className="grid grid-cols-2 gap-4">
         <div className="space-y-2">
           <label className="text-sm font-medium text-slate-900 dark:text-slate-200">
-            시작 날짜 {required && <span className="text-red-500 dark:text-red-400">*</span>}
+            시작 날짜{" "}
+            {required && (
+              <span className="text-red-500 dark:text-red-400">*</span>
+            )}
           </label>
           <div className="mt-1 text-sm text-slate-900 dark:text-white">
             {startDate ? formatDate(startDate) : "-"}
@@ -117,7 +145,10 @@ export function DateRangeInputs({
         </div>
         <div className="space-y-2">
           <label className="text-sm font-medium text-slate-900 dark:text-slate-200">
-            종료 날짜 {required && <span className="text-red-500 dark:text-red-400">*</span>}
+            종료 날짜{" "}
+            {required && (
+              <span className="text-red-500 dark:text-red-400">*</span>
+            )}
           </label>
           <div className="mt-1 text-sm text-slate-900 dark:text-white">
             {endDate ? formatDate(endDate) : "-"}
@@ -131,7 +162,10 @@ export function DateRangeInputs({
     <div className="grid grid-cols-2 gap-4">
       <div className="space-y-2">
         <label className="text-sm font-medium text-slate-900 dark:text-slate-200">
-          시작 날짜 {required && <span className="text-red-500 dark:text-red-400">*</span>}
+          시작 날짜{" "}
+          {required && (
+            <span className="text-red-500 dark:text-red-400">*</span>
+          )}
         </label>
         <Input
           type="date"
@@ -143,7 +177,10 @@ export function DateRangeInputs({
       </div>
       <div className="space-y-2">
         <label className="text-sm font-medium text-slate-900 dark:text-slate-200">
-          종료 날짜 {required && <span className="text-red-500 dark:text-red-400">*</span>}
+          종료 날짜{" "}
+          {required && (
+            <span className="text-red-500 dark:text-red-400">*</span>
+          )}
         </label>
         <Input
           type="date"

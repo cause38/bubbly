@@ -371,7 +371,7 @@ export function RoomView({ sessionCode }: RoomViewProps) {
             <TabsList>
               <TabsTrigger value="all" className="relative">
                 전체
-                <span className="ml-2 rounded-full bg-slate-200 px-2 py-0.5 text-xs text-slate-700 dark:bg-slate-500/20 dark:text-slate-300">
+                <span className="ml-2 rounded-full bg-brand/10 px-2 py-0.5 text-xs text-slate-700 dark:bg-slate-500/20 dark:text-slate-300">
                   {questions.length}
                 </span>
               </TabsTrigger>
@@ -382,7 +382,7 @@ export function RoomView({ sessionCode }: RoomViewProps) {
                     "ml-2 rounded-full px-2 py-0.5 text-xs",
                     pendingQuestions.length > 0
                       ? "bg-amber-500/20 text-amber-600"
-                      : "bg-slate-200 text-slate-700 dark:bg-slate-500/20 dark:text-slate-300"
+                      : "bg-brand/10 text-slate-700 dark:bg-slate-500/20 dark:text-slate-300"
                   )}
                 >
                   {pendingQuestions.length}
@@ -390,13 +390,13 @@ export function RoomView({ sessionCode }: RoomViewProps) {
               </TabsTrigger>
               <TabsTrigger value="approved" className="relative">
                 승인
-                <span className="ml-2 rounded-full bg-slate-200 px-2 py-0.5 text-xs text-slate-700 dark:bg-slate-500/20 dark:text-slate-300">
+                <span className="ml-2 rounded-full bg-brand/10 px-2 py-0.5 text-xs text-slate-700 dark:bg-slate-500/20 dark:text-slate-300">
                   {approvedQuestions.length}
                 </span>
               </TabsTrigger>
               <TabsTrigger value="archived" className="relative">
                 반려
-                <span className="ml-2 rounded-full bg-slate-200 px-2 py-0.5 text-xs text-slate-700 dark:bg-slate-500/20 dark:text-slate-300">
+                <span className="ml-2 rounded-full bg-brand/10 px-2 py-0.5 text-xs text-slate-700 dark:bg-slate-500/20 dark:text-slate-300">
                   {archivedQuestions.length}
                 </span>
               </TabsTrigger>
