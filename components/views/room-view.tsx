@@ -125,18 +125,12 @@ export function RoomView({ sessionCode }: RoomViewProps) {
     const checkScreenSize = () => {
       const isLargeScreen = window.innerWidth >= 1366;
 
-      if (isLargeScreen && !isRoomDrawerOpen) {
-        setRoomDrawerOpen(true);
-      }
-
-      if (!isLargeScreen && isRoomDrawerOpen) {
-        setRoomDrawerOpen(false);
-      }
+      setRoomDrawerOpen(isLargeScreen);
     };
 
     checkScreenSize();
-
     window.addEventListener("resize", checkScreenSize);
+
     return () => window.removeEventListener("resize", checkScreenSize);
   }, []);
 
