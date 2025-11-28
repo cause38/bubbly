@@ -50,7 +50,7 @@ const getThemeClasses = (
         "border border-slate-300 bg-transparent text-slate-900 lg:hover:border-slate-500 lg:hover:text-slate-600 dark:border-slate-700 dark:text-slate-100 lg:dark:hover:border-slate-500 lg:dark:hover:text-slate-400",
       ghost:
         "bg-transparent text-slate-900 lg:hover:bg-slate-100 dark:bg-transparent dark:text-slate-100 lg:dark:hover:bg-slate-800",
-      text: "bg-transparent text-slate-100 lg:hover:text-slate-700 dark:text-slate-400 lg:dark:hover:text-slate-300",
+      text: "bg-transparent text-slate-100 lg:hover:text-slate-300 dark:text-slate-400 lg:dark:hover:text-slate-300",
     },
     emerald: {
       default: "bg-emerald-600 text-white lg:hover:bg-emerald-700",
